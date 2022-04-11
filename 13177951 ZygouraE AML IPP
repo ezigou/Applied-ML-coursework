@@ -1,0 +1,2960 @@
+{
+  "nbformat": 4,
+  "nbformat_minor": 0,
+  "metadata": {
+    "colab": {
+      "name": "coursework.ipynb",
+      "provenance": [],
+      "collapsed_sections": []
+    },
+    "kernelspec": {
+      "display_name": "Python 3",
+      "name": "python3"
+    }
+  },
+  "cells": [
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "V8wo4im1vI5T"
+      },
+      "source": [
+        "CODE RUNS WITH THE VERSIONS:\n",
+        "\n",
+        "for numpy: 1.1.5 -\n",
+        "for pandas: 1.19.5 -\n",
+        "for sklearn:  0.22.2.post1 -\n",
+        "for keras: 2.4.3\n"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "6Zl84eEhvPyB"
+      },
+      "source": [
+        "#import sklearn\n",
+        "#import keras\n",
+        "\n",
+        "#print(np.__version__)\n",
+        "#print(pd.__version__)\n",
+        "#print(sklearn.__version__)\n",
+        "#print(keras.__version__)"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "l3_qVcGUuKhO"
+      },
+      "source": [
+        "import pandas as pd\r\n",
+        "import numpy as np\r\n",
+        "import time\r\n",
+        "from pandas import read_csv, set_option\r\n",
+        "from numpy import set_printoptions\r\n",
+        "from numpy.random import seed\r\n",
+        "from pandas.plotting import scatter_matrix\r\n",
+        "from sklearn.preprocessing import Normalizer, MinMaxScaler\r\n",
+        "from sklearn.feature_selection import VarianceThreshold, SelectKBest, chi2, RFE\r\n",
+        "from sklearn.model_selection import cross_validate, GridSearchCV\r\n",
+        "from sklearn.linear_model import LogisticRegression\r\n",
+        "from sklearn.neighbors import KNeighborsClassifier\r\n",
+        "from sklearn.discriminant_analysis import LinearDiscriminantAnalysis\r\n",
+        "from sklearn.svm import SVC, LinearSVC\r\n",
+        "from sklearn.metrics import accuracy_score, recall_score\r\n",
+        "from sklearn.metrics import precision_score, confusion_matrix\r\n",
+        "from sklearn.ensemble import ExtraTreesClassifier\r\n",
+        "from keras.layers import Dense, Input \r\n",
+        "from keras.models import Model, Sequential\r\n",
+        "from keras.optimizers import Adam\r\n",
+        "from keras.regularizers import l1\r\n",
+        "from keras.wrappers.scikit_learn import KerasClassifier"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "ZC9-U8TcwT0v"
+      },
+      "source": [
+        ""
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "-HKun7A6uREW",
+        "outputId": "dca595bf-3624-4ce6-8e64-0e0c2fb93793"
+      },
+      "source": [
+        "import sklearn\r\n",
+        "import keras\r\n",
+        "import matplotlib\r\n",
+        "\r\n",
+        "print(pd.__version__)\r\n",
+        "print(np.__version__)\r\n",
+        "print(sklearn.__version__)\r\n",
+        "print(keras.__version__)\r\n",
+        "print(matplotlib.__version__)"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "1.1.5\n",
+            "1.19.5\n",
+            "0.22.2.post1\n",
+            "2.4.3\n",
+            "3.2.2\n"
+          ],
+          "name": "stdout"
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "1T8gpZlHcfYf"
+      },
+      "source": [
+        "def filter_constant_columns(df_data_set_x, variance=0):\r\n",
+        "  # This function filters out all the constant columns (variance = 0)\r\n",
+        "  \r\n",
+        "  constant_filter = VarianceThreshold(threshold=variance)\r\n",
+        "  constant_filter.fit(df_data_set_x)\r\n",
+        "  non_constant = constant_filter.get_support()\r\n",
+        "\r\n",
+        "  columns_to_keep = (df_data_set_x.columns[constant_filter.get_support()])\r\n",
+        "\r\n",
+        "  return df_data_set_x[columns_to_keep]"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "34mL89vG5mDf"
+      },
+      "source": [
+        "def normalize(x_train_input, x_test_input):\n",
+        "  # Normalize train and test data\n",
+        "  # Normalize the training set and save the normalization parameters\n",
+        "  # Normalize the test set using the training normalization parameters\n",
+        "\n",
+        "  scaler=Normalizer().fit(x_train_input)\n",
+        "  x_train_norm=scaler.transform(x_train_input)\n",
+        "  x_test_norm=scaler.transform(x_test_input)\n",
+        "  \n",
+        "  return x_train_norm, x_test_norm"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "YU8ONbjs05A1"
+      },
+      "source": [
+        "def rescale(x_train_input, x_test_input):\n",
+        "  # Rescale train and test data\n",
+        "  # Rescale the training set and save the parameters\n",
+        "  # Rescale the test set using the training parameters\n",
+        "\n",
+        "  scaler=MinMaxScaler(feature_range=(0,1))\n",
+        "  scaler = scaler.fit(x_train_input)\n",
+        "  x_train_resc = scaler.transform(x_train_input)\n",
+        "  x_test_resc = scaler.transform(x_test_input)\n",
+        "  return x_train_resc, x_test_resc"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "HqtXs2ub9sgf"
+      },
+      "source": [
+        "def compare_algorithms(x_train_input, y_train_output, x_test_input, y_test_output):\n",
+        "\n",
+        "  # prints the validation accuracy (using K-Folf method on the train data set)\n",
+        "  # and the test accuracy by apllying a variety of models to the test data set  \n",
+        "  \n",
+        "  models=[]\n",
+        "  models.append(('LR', LogisticRegression(solver='liblinear'))) \n",
+        "  models.append(('LDA', LinearDiscriminantAnalysis()))\n",
+        "  models.append(('KNN', KNeighborsClassifier()))\n",
+        "  #models.append(('CART', DecisionTreeClassifier()))\n",
+        "  #models.append(('NB', GaussianNB()))\n",
+        "  models.append(('SVC', SVC()))\n",
+        "  models.append(('LnSVC', LinearSVC()))\n",
+        "\n",
+        "  for name, model in models:\n",
+        "    model.fit(x_train_input, y_train_output)\n",
+        "    train_prediction = model.predict(x_train_input)\n",
+        "    train_acc = accuracy_score(y_train_output, train_prediction)\n",
+        "    test_prediction = model.predict(x_test_input)\n",
+        "    test_acc = accuracy_score(y_test_output, test_prediction)\n",
+        "    print(\"%s: train_acc: %.3f / test_acc: %.3f\" % (name,train_acc, test_acc))\n",
+        "  "
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "z9vgZFr8euFc"
+      },
+      "source": [
+        "def kbest(x_train_input, y_train_output, x_test_input):\n",
+        "  # feature selection using K-best\n",
+        "  \n",
+        "  # apply SelectKBest class to extract top 10 best features\n",
+        "  bestfeatures = SelectKBest(score_func=chi2, k=10)\n",
+        "  fit = bestfeatures.fit(x_train_input, y_train_output)\n",
+        "  dfscores = pd.DataFrame(fit.scores_)\n",
+        "  df = pd.DataFrame(x_train_input)\n",
+        "  dfcolumns = pd.DataFrame(df.columns)\n",
+        "\n",
+        "  # concat two dataframes for better visualization \n",
+        "  featureScores = pd.concat([dfcolumns,dfscores],axis=1)\n",
+        "  # naming the dataframe columns\n",
+        "  featureScores.columns = ['Specs','Score']  \n",
+        "\n",
+        "  # print 10 best features\n",
+        "  print(featureScores.nlargest(10,'Score'))  \n",
+        "\n",
+        "  # find the columns of the 10 best features\n",
+        "  featureScores=featureScores.nlargest(10,'Score').values\n",
+        "  col=list(featureScores[:,0])\n",
+        "\n",
+        "  # returned train data set\n",
+        "  features = fit.transform(x_train_input)\n",
+        "\n",
+        "  # returned test data set\n",
+        "  df_test_features = pd.DataFrame(x_test_input)\n",
+        "  test_features = df_test_features[col]\n",
+        "\n",
+        "  return features, test_features.values"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "0M9oa_TtnPJo"
+      },
+      "source": [
+        "def rfe_elimination(model, x_train_input, y_train_output, x_test_input):\n",
+        "  # apply Recursive Feature Elimination(RFE) for feature selection\n",
+        "\n",
+        "  rfe=RFE(model,10)\n",
+        "  fit=rfe.fit(x_train_input, y_train_output)\n",
+        "  #print(\"Num Features: %d\" % fit.n_features_)\n",
+        "  #print(\"Selected Features: %s\" % fit.support_)\n",
+        "  #print(\"Feature Ranking: %s\" % fit.ranking_)\n",
+        "\n",
+        "  dfscores = pd.DataFrame(fit.ranking_)\n",
+        "  df = pd.DataFrame(x_train_input)\n",
+        "  dfcolumns = pd.DataFrame(df.columns)\n",
+        "\n",
+        "  # concat two dataframes for better visualization \n",
+        "  featureScores = pd.concat([dfcolumns,dfscores],axis=1)\n",
+        "  # naming the dataframe columns\n",
+        "  featureScores.columns = ['Specs','Score']  \n",
+        "  print(featureScores.nsmallest(10,'Score')) \n",
+        "\n",
+        "  # find the columns of the 10 best features\n",
+        "  featureScores=(featureScores.nsmallest(10,'Score')).values\n",
+        "  col=list(featureScores[:,0])\n",
+        "\n",
+        "  # returned train data set\n",
+        "  features=fit.transform(x_train_input)\n",
+        "\n",
+        "  # returned test data set\n",
+        "  df_test_features = pd.DataFrame(x_test_input)\n",
+        "  test_features = df_test_features[col]\n",
+        "\n",
+        "  return features, test_features.values"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "PqH5mEPbp-ei"
+      },
+      "source": [
+        "def extra_trees_classifier(x_train_input, y_train_output, x_test_input):\n",
+        "  # feature selection with extra tree classifier - Feature Importance\n",
+        "\n",
+        "  model = ExtraTreesClassifier(random_state=21)\n",
+        "  tree=model.fit(x_train_input,y_train_output)\n",
+        "  #print(model.feature_importances_)\n",
+        "\n",
+        "  dfscores = pd.DataFrame(tree.feature_importances_)\n",
+        "  df = pd.DataFrame(x_train_input)\n",
+        "  dfcolumns = pd.DataFrame(df.columns)\n",
+        "  \n",
+        "  # concat two dataframes for better visualization \n",
+        "  featureScores = pd.concat([dfcolumns,dfscores],axis=1)\n",
+        "  # naming the dataframe columns\n",
+        "  featureScores.columns = ['Specs','Score']  \n",
+        "  featureScores=featureScores.nlargest(10,'Score')\n",
+        "  print(featureScores)\n",
+        "\n",
+        "  # find the columns of the 10 best features\n",
+        "  featureScores=featureScores.values\n",
+        "  col=list(featureScores[:,0])\n",
+        "\n",
+        "  # returned train data set\n",
+        "  features=df[col]\n",
+        "\n",
+        "  # returned test data set\n",
+        "  df_test_features = pd.DataFrame(x_test_input)\n",
+        "  test_features = df_test_features[col]\n",
+        "\n",
+        "  return features.values, test_features.values"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "yTkwkbZFEEPP"
+      },
+      "source": [
+        "#no need to reshape!!!!\n",
+        "#reshape\n",
+        "#x_train_norm = x_train_norm.reshape((len(x_train_norm), np.prod(x_train_norm.shape[1:]))) \n",
+        "#x_test_norm = x_test_norm.reshape((len(x_test_norm), np.prod(x_test_norm.shape[1:])))\n",
+        "#print(x_train_norm.shape)"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "A-nSGFUobMwN"
+      },
+      "source": [
+        "def stacked_autoencoder(x_train_input, x_test_input):\n",
+        "  # returns the encoder model of a stacked autoencoder with 2 hidden layers\n",
+        "  \n",
+        "  input = Input(shape=(82,))\n",
+        "  hidden_1 = Dense(500, activation='relu')(input)\n",
+        "  hidden_2 = Dense(300, activation='relu')(hidden_1)\n",
+        "  code = Dense(20, activation='relu')(hidden_2)\n",
+        "  hidden_3 = Dense(300, activation='relu')(code)\n",
+        "  hidden_4 = Dense(500, activation='relu')(hidden_3) \n",
+        "  output = Dense(82, activation='sigmoid')(hidden_4)\n",
+        "\n",
+        "  # define autoencoder model\n",
+        "  autoencoder = Model(inputs=input, outputs=output)\n",
+        "  # compile model\n",
+        "  autoencoder.compile(optimizer='adam', loss='binary_crossentropy')\n",
+        "  # fit model to reconstruct the input\n",
+        "  autoencoder.fit(x_train_input, x_train_input, batch_size=200, epochs=20, validation_data=(x_test_input, x_test_input))\n",
+        "\n",
+        "  # define encoder model\n",
+        "  encoder1 = Model(inputs=input, outputs=code)\n",
+        "#  # save the encoder model to file\n",
+        "#  encoder.save(\"encoder1.h5\")\n",
+        "\n",
+        "  return encoder1"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "Q9wwaGy4joN0"
+      },
+      "source": [
+        "def denoising_autoencoder(x_train_input, x_test_input):\n",
+        "  # returns the encoder model of a denoising autoencoder with 2 hidden layers\n",
+        "\n",
+        "  # add noise\n",
+        "  noise_factor = 0.4\n",
+        "  x_train_noisy = x_train_input + noise_factor * np.random.normal(size=x_train_input.shape)\n",
+        "  x_test_noisy = x_test_input + noise_factor * np.random.normal(size=x_test_input.shape)\n",
+        "  x_train_noisy = np.clip(x_train_noisy, 0.0, 1.0)\n",
+        "  x_test_noisy = np.clip(x_test_noisy, 0.0, 1.0)\n",
+        "\n",
+        "  input = Input(shape=(82,))\n",
+        "  hidden_1 = Dense(500, activation='relu')(input)\n",
+        "  hidden_2 = Dense(300, activation='relu')(hidden_1)\n",
+        "  code = Dense(20, activation='relu')(hidden_2)\n",
+        "  hidden_3 = Dense(300, activation='relu')(code)\n",
+        "  hidden_4 = Dense(500, activation='relu')(hidden_3) \n",
+        "  output = Dense(82, activation='sigmoid')(hidden_4)\n",
+        "\n",
+        "  #define noisy aytoencoder model\n",
+        "  autoencoder_noisy = Model(inputs=input, outputs=output)\n",
+        "  # compile the model\n",
+        "  autoencoder_noisy.compile(optimizer='adam', loss='binary_crossentropy')\n",
+        "  # fit model to reconstruct the input\n",
+        "  autoencoder_noisy.fit(x_train_noisy, x_train_noisy, batch_size=200, epochs=20, validation_data=(x_test_noisy, x_test_noisy))\n",
+        "\n",
+        "  # define the encoder model\n",
+        "  encoder2 = Model(inputs=input, outputs=code)\n",
+        "  #  # save the encoder model to file\n",
+        "  #  encoder.save(\"encoder2.h5\")\n",
+        "\n",
+        "  return encoder2"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "sNxK6SdZelO9"
+      },
+      "source": [
+        "def sparse_autoencoder(x_train_input, x_test_input):\n",
+        "  #returns the encoder model of a sparse autoencoder \n",
+        "\n",
+        "  input_size = 82\n",
+        "  code_size = 20\n",
+        "\n",
+        "  input = Input(shape=(input_size,))\n",
+        "  code = Dense(code_size,activity_regularizer=l1(10e-6), activation='relu')(input) \n",
+        "  output = Dense(input_size, activation='sigmoid')(code)\n",
+        "\n",
+        "  # define autoencoder model\n",
+        "  autoencoder_regularized = Model(inputs=input, outputs=output) \n",
+        "  # compile the autoencoder model\n",
+        "  autoencoder_regularized.compile(optimizer='adam', loss='binary_crossentropy') \n",
+        "  # fit autoencoder model to reconstruct the input\n",
+        "  autoencoder_regularized.fit(x_train_input, x_train_input, batch_size=200,epochs=20, validation_data=(x_test_input, x_test_input))\n",
+        "  \n",
+        "  # define the encoder model\n",
+        "  encoder3 = Model(input, code)\n",
+        "  #  # save the encoder model to file\n",
+        "  #  encoder.save(\"encoder3.h5\")\n",
+        "\n",
+        "  return encoder3"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "5yvE42mfZOl-"
+      },
+      "source": [
+        "def encoder_transformation(encoder, x_train_input, x_test_input):\n",
+        "  # use the encoder models to transform the data\n",
+        "\n",
+        "  # train_data transformation\n",
+        "  x_train_encoded = encoder.predict(x_train_input)\n",
+        "  # test data transformation\n",
+        "  x_test_encoded = encoder.predict(x_test_input)\n",
+        "\n",
+        "  return x_train_encoded, x_test_encoded"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "WHefLBK23CgZ"
+      },
+      "source": [
+        "def mixed_data(train1, train2, test1, test2):\n",
+        "  # concatenates columns wise 2 numpy arrays\n",
+        "  # in order to combine original and extracted data\n",
+        "\n",
+        "  train_array = np.concatenate((train1, train2), axis=1)\n",
+        "  test_array = np.concatenate((test1, test2), axis=1)\n",
+        "\n",
+        "  return train_array, test_array"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "V5gT_0oYKs8X"
+      },
+      "source": [
+        "def compare_algorithms_2(x_train_input, y_train_output, x_test_input, y_test_output):\n",
+        "\n",
+        "  # applying a selection of models from compare_algorithms method\n",
+        "  # prints the validation accuracy (using K-Folf method on the train data set)\n",
+        "  # and the test accuracy, AUC metric, classification report and \n",
+        "  # time to built (TBM) and to test (TTM) the model \n",
+        "\n",
+        "  models=[]\n",
+        "  models.append(('LR', LogisticRegression(solver='liblinear'))) \n",
+        "  models.append(('LDA', LinearDiscriminantAnalysis()))\n",
+        "  models.append(('LnSVC', LinearSVC()))\n",
+        "  \n",
+        "  for name, model in models:\n",
+        "\n",
+        "    start = time.time()\n",
+        "    model.fit(x_train_input, y_train_output)\n",
+        "    train_time = time.time()\n",
+        "\n",
+        "    test_prediction = model.predict(x_test_input)\n",
+        "    matrix = confusion_matrix(y_test_output, test_prediction)\n",
+        "    acc = round(accuracy_score(y_test_output, test_prediction),3)\n",
+        "    DR = round(recall_score(y_test_output, test_prediction),3)\n",
+        "    Prec = round(precision_score(y_test_output, test_prediction),3)\n",
+        "    FAR = round(float(matrix[0][1] / (matrix[0][1] + matrix[0][0])),3)\n",
+        "    FNR = round(float(matrix[1][0] / (matrix[1][0] + matrix[1][1])),3)\n",
+        "    Type_1 = matrix[0][1]\n",
+        "    Type_2 = matrix[1][0]\n",
+        "\n",
+        "    test_time = time.time()\n",
+        "    \n",
+        "    print(\"%s:\" % (name))\n",
+        "    print(matrix)\n",
+        "    print(\"acc: \",acc,\" / DR: \",DR,\" / Prec: \",Prec,\" / FAR: \",FAR,\" / FNR: \",FNR)\n",
+        "    print(\"Type I error: \",Type_1, \" / Type II error: \",Type_2) \n",
+        "    print(\"TBM: \",round(train_time-start,2))\n",
+        "    print(\"TTM: \",round(test_time-train_time,2), \"\\n\")\n"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "hGoncg6iBrnA"
+      },
+      "source": [
+        "def mixed_data_2(x_train_input, y_train_output):\n",
+        "  # concatenates columns wise 2 numpy arrays\n",
+        "  # to create a data set (dataframe) that contains both x and y variables\n",
+        "\n",
+        "  train_array = np.concatenate((x_train_input, y_train_output.reshape(-1,1)), axis=1)\n",
+        "  df_train_array = pd.DataFrame(train_array)\n",
+        "  \n",
+        "  return df_train_array"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "3bMM25MO-J_w"
+      },
+      "source": [
+        "def compare_algorithms_3(x_train_input, y_train_output, x_test_input, y_test_output):\n",
+        "\n",
+        "  # applying a selection of models from compare_algorithms method\n",
+        "  # prints the validation accuracy (using K-Folf method on the train data set)\n",
+        "  # and the test accuracy, AUC metric, classification report and \n",
+        "  # time to built (TBM) and to test (TTM) the model \n",
+        "\n",
+        "  models=[]\n",
+        "  models.append(('LR', LogisticRegression(solver='liblinear'))) \n",
+        "  \n",
+        "  for name, model in models:\n",
+        "\n",
+        "    start = time.time()\n",
+        "    model.fit(x_train_input, y_train_output)\n",
+        "    train_time = time.time()\n",
+        "\n",
+        "    test_prediction = model.predict(x_test_input)\n",
+        "    matrix = confusion_matrix(y_test_output, test_prediction)\n",
+        "    acc = round(accuracy_score(y_test_output, test_prediction),3)\n",
+        "    DR = round(recall_score(y_test_output, test_prediction),3)\n",
+        "    Prec = round(precision_score(y_test_output, test_prediction),3)\n",
+        "    FAR = round(float(matrix[0][1] / (matrix[0][1] + matrix[0][0])),3)\n",
+        "    FNR = round(float(matrix[1][0] / (matrix[1][0] + matrix[1][1])),3)\n",
+        "    Type_1 = matrix[0][1]\n",
+        "    Type_2 = matrix[1][0]\n",
+        "    \n",
+        "    test_time = time.time()\n",
+        "    \n",
+        "    print(\"%s:\" % (name))\n",
+        "    print(matrix)\n",
+        "    print(\"acc: \",acc,\" / DR: \",DR,\" / Prec: \",Prec,\" / FAR: \",FAR,\" / FNR: \",FNR)\n",
+        "    print(\"Type I error: \",Type_1, \" / Type II error: \",Type_2)  \n",
+        "    print(\"TBM: \",round(train_time-start,2))\n",
+        "    print(\"TTM: \",round(test_time-train_time,2), \"\\n\")"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "KxJd23Hyp39u"
+      },
+      "source": [
+        "RUN"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "K76ClZgz5vu0"
+      },
+      "source": [
+        "DEALING WITH THE DATA"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "8UunGMNRNXAT"
+      },
+      "source": [
+        "#load the data\n",
+        "filename1 =\"train_imperson_without4n7_balanced_data.csv\"\n",
+        "filename2 =\"test_imperson_without4n7_balanced_data.csv\"\n",
+        "\n",
+        "df_train_data = read_csv(filename1)\n",
+        "df_test_data = read_csv(filename2)\n",
+        "\n",
+        "\n",
+        "# apply constant column filter\n",
+        "\n",
+        "# not matched constant columns in the train and test data set\n",
+        "\n",
+        "# merge them to one data set\n",
+        "df_full_data = df_train_data.append(df_test_data)\n",
+        "\n",
+        "#apply the filter\n",
+        "df_full_data_filtered = filter_constant_columns(df_full_data)\n",
+        "\n",
+        "# separate the data sets\n",
+        "df_train_data_filtered = df_full_data_filtered[0:97044]\n",
+        "df_test_data_filtered = df_full_data_filtered[97044:]\n",
+        "\n",
+        "\n",
+        "#separate the filtered x,y\n",
+        "x_train = df_train_data_filtered[df_train_data_filtered.columns[:-1]].values\n",
+        "y_train = df_train_data_filtered[df_train_data_filtered.columns[-1]].values\n",
+        "x_test = df_test_data_filtered[df_test_data_filtered.columns[:-1]].values\n",
+        "y_test = df_test_data_filtered[df_test_data_filtered.columns[-1]].values"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "ghXPi-v--9Yt"
+      },
+      "source": [
+        "x_train_norm, x_test_norm = normalize(x_train, x_test)"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "FwOrcHT105K0"
+      },
+      "source": [
+        "x_train_resc, x_test_resc = rescale(x_train, x_test)"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "VMhTSMRZ9jUn"
+      },
+      "source": [
+        "FITTING MODELS TO COMPARE, USING: Raw data / Normalized data / Rescaled data"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "yvrwOm0DpVvq",
+        "outputId": "ba5a5168-a82b-4570-f0bb-a5cf9f8fe320"
+      },
+      "source": [
+        "# fitting models to raw data\n",
+        "compare_algorithms(x_train, y_train, x_test, y_test)"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "LR: train_acc: 0.992 / test_acc: 0.868\n",
+            "LDA: train_acc: 0.985 / test_acc: 0.931\n",
+            "KNN: train_acc: 0.999 / test_acc: 0.534\n",
+            "SVC: train_acc: 0.995 / test_acc: 0.530\n",
+            "LnSVC: train_acc: 0.995 / test_acc: 0.652\n"
+          ],
+          "name": "stdout"
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "HqcPfwG2sIX3",
+        "outputId": "1d03a950-d32c-4eb8-b4e9-072104c679f7"
+      },
+      "source": [
+        "# fitting models to normalized data\n",
+        "compare_algorithms(x_train_norm, y_train, x_test_norm, y_test)"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "LR: train_acc: 0.989 / test_acc: 0.965\n",
+            "LDA: train_acc: 0.985 / test_acc: 0.614\n",
+            "KNN: train_acc: 0.999 / test_acc: 0.532\n",
+            "SVC: train_acc: 0.995 / test_acc: 0.531\n",
+            "LnSVC: train_acc: 0.992 / test_acc: 0.525\n"
+          ],
+          "name": "stdout"
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "2ddemxPoeRWQ",
+        "outputId": "454e794b-3ca4-4c9a-84e3-6757e16c02c2"
+      },
+      "source": [
+        "# fitting models to rescaled data\n",
+        "compare_algorithms(x_train_resc, y_train, x_test_resc, y_test)"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "LR: train_acc: 0.996 / test_acc: 0.506\n",
+            "LDA: train_acc: 0.985 / test_acc: 0.931\n",
+            "KNN: train_acc: 1.000 / test_acc: 0.536\n",
+            "SVC: train_acc: 0.997 / test_acc: 0.499\n",
+            "LnSVC: train_acc: 0.997 / test_acc: 0.509\n"
+          ],
+          "name": "stdout"
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "RhzBVdyXe4JK"
+      },
+      "source": [
+        "FEATURE SELECTION (TOP 10 FEATURES) USING: K-BEST / RFE / EXTRA TREES"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "chfPKEsKDaQ7",
+        "outputId": "c3b09cbc-4641-45c0-d240-6a67cc49e8a8"
+      },
+      "source": [
+        "# K-Best method for raw data\n",
+        "kbest_train_features, kbest_test_features = kbest(x_train, y_train, x_test)"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "    Specs         Score\n",
+            "26     26  32124.682195\n",
+            "16     16  28936.000138\n",
+            "22     22  28321.490224\n",
+            "13     13  24346.021809\n",
+            "81     81  13311.733744\n",
+            "15     15  12317.666392\n",
+            "2       2  12076.290588\n",
+            "3       3  12076.290588\n",
+            "23     23   7911.296191\n",
+            "36     36   7720.479234\n"
+          ],
+          "name": "stdout"
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "f_B2k0e1DbTA",
+        "outputId": "44a9e20d-a1ce-42e6-b86e-22cda7106421"
+      },
+      "source": [
+        "# K-Best method for normalized data\n",
+        "kbest_train_features_norm, kbest_test_features_norm = kbest(x_train_norm, y_train, x_test_norm)"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "    Specs        Score\n",
+            "26     26  7185.552254\n",
+            "22     22  6458.853639\n",
+            "16     16  6265.412604\n",
+            "13     13  5162.369647\n",
+            "81     81  2648.775398\n",
+            "15     15  2569.185754\n",
+            "2       2  2378.606418\n",
+            "3       3  2378.606418\n",
+            "23     23  2091.641720\n",
+            "28     28  1758.070006\n"
+          ],
+          "name": "stdout"
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "u-2LbYOhAKvr",
+        "outputId": "13942b37-3c11-477e-b096-d8df4a908b08"
+      },
+      "source": [
+        "# K-Best method for rescaled data\n",
+        "kbest_train_features_resc, kbest_test_features_resc = kbest(x_train_resc, y_train, x_test_resc)"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "    Specs         Score\n",
+            "26     26  32124.682195\n",
+            "16     16  28936.000138\n",
+            "22     22  28321.490224\n",
+            "13     13  24346.021809\n",
+            "81     81  13311.733744\n",
+            "15     15  12317.666392\n",
+            "2       2  12076.290588\n",
+            "3       3  12076.290588\n",
+            "23     23   7911.296191\n",
+            "36     36   7720.479234\n"
+          ],
+          "name": "stdout"
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "AVYdEmXfDbdb",
+        "outputId": "746d66ef-61cd-4103-ed73-6ff5c6ddb9e4"
+      },
+      "source": [
+        "# Recursive Feature Elimination method for raw data\n",
+        "rfe_train_features, rfe_test_features = rfe_elimination(LogisticRegression(solver='liblinear'), x_train, y_train, x_test)"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "    Specs  Score\n",
+            "3       3      1\n",
+            "13     13      1\n",
+            "22     22      1\n",
+            "25     25      1\n",
+            "36     36      1\n",
+            "44     44      1\n",
+            "46     46      1\n",
+            "50     50      1\n",
+            "55     55      1\n",
+            "74     74      1\n"
+          ],
+          "name": "stdout"
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "zWbFiNooFVZy",
+        "outputId": "ee102012-c308-48a6-ffba-17b1a390da24"
+      },
+      "source": [
+        "# Recursive Feature Elimination method for normalized data\n",
+        "rfe_train_features_norm, rfe_test_features_norm = rfe_elimination(LogisticRegression(solver='liblinear'), x_train_norm, y_train, x_test_norm)"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "    Specs  Score\n",
+            "13     13      1\n",
+            "15     15      1\n",
+            "18     18      1\n",
+            "22     22      1\n",
+            "26     26      1\n",
+            "36     36      1\n",
+            "44     44      1\n",
+            "46     46      1\n",
+            "69     69      1\n",
+            "73     73      1\n"
+          ],
+          "name": "stdout"
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "odiRrBypgliG",
+        "outputId": "d4c937bb-f787-4bd9-ca0d-2220bca70d39"
+      },
+      "source": [
+        "# Recursive Feature Elimination method for rescaled data\n",
+        "rfe_train_features_resc, rfe_test_features_resc = rfe_elimination(LogisticRegression(solver='liblinear'), x_train_resc, y_train, x_test_resc)"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "    Specs  Score\n",
+            "13     13      1\n",
+            "20     20      1\n",
+            "23     23      1\n",
+            "25     25      1\n",
+            "36     36      1\n",
+            "50     50      1\n",
+            "51     51      1\n",
+            "55     55      1\n",
+            "62     62      1\n",
+            "74     74      1\n"
+          ],
+          "name": "stdout"
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "yoJzUpGNFlXU",
+        "outputId": "7438a8d4-34e3-467d-f009-668439b66893"
+      },
+      "source": [
+        "# Extra Trees Classifier method for raw data\n",
+        "extree_train_features, extree_test_features = extra_trees_classifier(x_train, y_train, x_test)"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "    Specs     Score\n",
+            "15     15  0.109607\n",
+            "26     26  0.105623\n",
+            "22     22  0.098700\n",
+            "13     13  0.068557\n",
+            "16     16  0.062296\n",
+            "23     23  0.060353\n",
+            "28     28  0.052966\n",
+            "11     11  0.051659\n",
+            "36     36  0.047049\n",
+            "21     21  0.032328\n"
+          ],
+          "name": "stdout"
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "IRSY3vSlFp0M",
+        "outputId": "7ccfc1a3-dab5-45dd-c473-f84b2399b82e"
+      },
+      "source": [
+        "# Extra Trees Classifier method for normalized data\n",
+        "extree_train_features_norm, extree_test_features_norm = extra_trees_classifier(x_train_norm, y_train, x_test_norm)"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "    Specs     Score\n",
+            "26     26  0.100260\n",
+            "15     15  0.088078\n",
+            "22     22  0.073067\n",
+            "16     16  0.070049\n",
+            "13     13  0.050870\n",
+            "28     28  0.048229\n",
+            "36     36  0.036058\n",
+            "75     75  0.033650\n",
+            "23     23  0.033624\n",
+            "11     11  0.031078\n"
+          ],
+          "name": "stdout"
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "4TxoNGth8guq",
+        "outputId": "9c5e7840-1002-4346-eb35-935123551915"
+      },
+      "source": [
+        "# Extra Trees Classifier method for rescaled data\n",
+        "extree_train_features_resc, extree_test_features_resc = extra_trees_classifier(x_train_resc, y_train, x_test_resc)"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "    Specs     Score\n",
+            "15     15  0.109607\n",
+            "26     26  0.105623\n",
+            "22     22  0.098700\n",
+            "13     13  0.068557\n",
+            "16     16  0.062296\n",
+            "23     23  0.060353\n",
+            "28     28  0.052966\n",
+            "11     11  0.051659\n",
+            "36     36  0.047049\n",
+            "21     21  0.032328\n"
+          ],
+          "name": "stdout"
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "JRgjjuRX8ckL"
+      },
+      "source": [
+        "MODEL EVALUATION WITH SELECTED FEATURES"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "L3DLrpW7IkE6"
+      },
+      "source": [
+        "# raw data"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "2TsOIMuN8I5B",
+        "outputId": "e932978c-4434-41fd-bedc-bb92a04a9142"
+      },
+      "source": [
+        "# compare models using top 10 features from K-Best for raw data\n",
+        "compare_algorithms(kbest_train_features, y_train, kbest_test_features, y_test)"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "LR: train_acc: 0.961 / test_acc: 0.500\n",
+            "LDA: train_acc: 0.929 / test_acc: 0.277\n",
+            "KNN: train_acc: 0.999 / test_acc: 0.500\n",
+            "SVC: train_acc: 0.992 / test_acc: 0.500\n",
+            "LnSVC: train_acc: 0.960 / test_acc: 0.500\n"
+          ],
+          "name": "stdout"
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "F_cZSXi08Ki9",
+        "outputId": "38c20bcc-faed-4dee-be0e-178a56bef908"
+      },
+      "source": [
+        "# compare models using top 10 features from RFE for raw data\n",
+        "compare_algorithms(rfe_train_features, y_train, rfe_test_features, y_test)"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "LR: train_acc: 0.985 / test_acc: 0.861\n",
+            "LDA: train_acc: 0.969 / test_acc: 0.820\n",
+            "KNN: train_acc: 1.000 / test_acc: 0.531\n",
+            "SVC: train_acc: 0.997 / test_acc: 0.521\n",
+            "LnSVC: train_acc: 0.993 / test_acc: 0.866\n"
+          ],
+          "name": "stdout"
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "QQAeaDaE8KuT",
+        "outputId": "ae7599a8-6ab5-4d3a-9e8e-811e6c60f980"
+      },
+      "source": [
+        "# compare models using top 10 features from Extra Trees for raw data\n",
+        "compare_algorithms(extree_train_features, y_train, extree_test_features, y_test)"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "LR: train_acc: 0.970 / test_acc: 0.959\n",
+            "LDA: train_acc: 0.938 / test_acc: 0.916\n",
+            "KNN: train_acc: 0.998 / test_acc: 0.521\n",
+            "SVC: train_acc: 0.988 / test_acc: 0.502\n",
+            "LnSVC: train_acc: 0.971 / test_acc: 0.958\n"
+          ],
+          "name": "stdout"
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "wbCWrQMlIoPH"
+      },
+      "source": [
+        "# normalized data"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "VFmIHHIf8640",
+        "outputId": "5b50233c-4cd0-4b47-b87c-207e0754b5d1"
+      },
+      "source": [
+        "# compare models using top 10 features from K-Best for normalized data\n",
+        "compare_algorithms(kbest_train_features_norm, y_train, kbest_test_features_norm, y_test)"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "LR: train_acc: 0.929 / test_acc: 0.500\n",
+            "LDA: train_acc: 0.928 / test_acc: 0.675\n",
+            "KNN: train_acc: 0.998 / test_acc: 0.500\n",
+            "SVC: train_acc: 0.982 / test_acc: 0.500\n",
+            "LnSVC: train_acc: 0.941 / test_acc: 0.499\n"
+          ],
+          "name": "stdout"
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "5JeVgY8_87Sl",
+        "outputId": "6b02f226-5bba-4da3-b168-48211240355a"
+      },
+      "source": [
+        "# compare models using top 10 features from RFE for normalized data\n",
+        "compare_algorithms(rfe_train_features_norm, y_train, rfe_test_features_norm, y_test)"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "LR: train_acc: 0.987 / test_acc: 0.520\n",
+            "LDA: train_acc: 0.974 / test_acc: 0.958\n",
+            "KNN: train_acc: 0.999 / test_acc: 0.532\n",
+            "SVC: train_acc: 0.992 / test_acc: 0.527\n",
+            "LnSVC: train_acc: 0.988 / test_acc: 0.519\n"
+          ],
+          "name": "stdout"
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "v2NL0Wxw87XO",
+        "outputId": "7c716a81-55be-4562-afa0-acdcbac2587e"
+      },
+      "source": [
+        "# compare models using top 10 features from Extra Trees for normalized data\n",
+        "compare_algorithms(extree_train_features_norm, y_train, extree_test_features_norm, y_test)"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "LR: train_acc: 0.954 / test_acc: 0.964\n",
+            "LDA: train_acc: 0.934 / test_acc: 0.907\n",
+            "KNN: train_acc: 0.999 / test_acc: 0.528\n",
+            "SVC: train_acc: 0.989 / test_acc: 0.507\n",
+            "LnSVC: train_acc: 0.962 / test_acc: 0.967\n"
+          ],
+          "name": "stdout"
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "RYYrr87QIspf"
+      },
+      "source": [
+        "# rescaled data"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "YDdK1mPUwj9u",
+        "outputId": "0594d091-3dea-4be8-8e06-5dbd9fb3403a"
+      },
+      "source": [
+        "# compare models using top 10 features from K-Best for rescaled data\n",
+        "compare_algorithms(kbest_train_features_resc, y_train, kbest_test_features_resc, y_test)"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "LR: train_acc: 0.961 / test_acc: 0.500\n",
+            "LDA: train_acc: 0.929 / test_acc: 0.277\n",
+            "KNN: train_acc: 0.999 / test_acc: 0.500\n",
+            "SVC: train_acc: 0.992 / test_acc: 0.500\n",
+            "LnSVC: train_acc: 0.960 / test_acc: 0.500\n"
+          ],
+          "name": "stdout"
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "EEZ6j4DJ1_2c",
+        "outputId": "e28be73c-ef24-44fb-ce5e-972987a28704"
+      },
+      "source": [
+        "# compare models using top 10 features from RFE for rescaled data\n",
+        "compare_algorithms(rfe_train_features_resc, y_train, rfe_test_features_resc, y_test)"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "LR: train_acc: 0.992 / test_acc: 0.813\n",
+            "LDA: train_acc: 0.980 / test_acc: 0.783\n",
+            "KNN: train_acc: 0.999 / test_acc: 0.535\n",
+            "SVC: train_acc: 0.997 / test_acc: 0.494\n",
+            "LnSVC: train_acc: 0.995 / test_acc: 0.816\n"
+          ],
+          "name": "stdout"
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "wcN_JfGV13TP",
+        "outputId": "24c3a9ee-a0ab-4bb3-e980-6b6fc77472c2"
+      },
+      "source": [
+        "# compare models using top 10 features from Extra Trees for rescaled data\n",
+        "compare_algorithms(extree_train_features_resc, y_train, extree_test_features_resc, y_test)"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "LR: train_acc: 0.969 / test_acc: 0.959\n",
+            "LDA: train_acc: 0.938 / test_acc: 0.916\n",
+            "KNN: train_acc: 0.998 / test_acc: 0.521\n",
+            "SVC: train_acc: 0.988 / test_acc: 0.502\n",
+            "LnSVC: train_acc: 0.971 / test_acc: 0.958\n"
+          ],
+          "name": "stdout"
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "pTCG65_Ay2Qf"
+      },
+      "source": [
+        "USE OF AUTOENCODERS FOR FEATURE EXTRACTION: STACKED / DENOISING / SPARSE\n",
+        "\n",
+        "---\n",
+        "\n",
+        "\n"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "RzKXtUwLVXGm",
+        "outputId": "981e0ffa-de7d-4d70-ffee-e55c2f807e24"
+      },
+      "source": [
+        "# creating the encoder model of the stacked autoencoder\n",
+        "# for the raw, normalized and rescaled data\n",
+        "\n",
+        "encoder1_raw = stacked_autoencoder(x_train, x_test)\n",
+        "encoder1_norm = stacked_autoencoder(x_train_norm, x_test_norm)\n",
+        "encoder1_resc = stacked_autoencoder(x_train_resc, x_test_resc)\n"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "Epoch 1/20\n",
+            "486/486 [==============================] - 9s 17ms/step - loss: 0.1379 - val_loss: 0.5096\n",
+            "Epoch 2/20\n",
+            "486/486 [==============================] - 8s 17ms/step - loss: 0.0604 - val_loss: 0.4884\n",
+            "Epoch 3/20\n",
+            "486/486 [==============================] - 8s 17ms/step - loss: 0.0596 - val_loss: 0.4721\n",
+            "Epoch 4/20\n",
+            "486/486 [==============================] - 8s 16ms/step - loss: 0.0594 - val_loss: 0.4686\n",
+            "Epoch 5/20\n",
+            "486/486 [==============================] - 8s 16ms/step - loss: 0.0592 - val_loss: 0.4392\n",
+            "Epoch 6/20\n",
+            "486/486 [==============================] - 9s 18ms/step - loss: 0.0591 - val_loss: 0.4424\n",
+            "Epoch 7/20\n",
+            "486/486 [==============================] - 9s 18ms/step - loss: 0.0591 - val_loss: 0.4390\n",
+            "Epoch 8/20\n",
+            "486/486 [==============================] - 9s 18ms/step - loss: 0.0589 - val_loss: 0.4318\n",
+            "Epoch 9/20\n",
+            "486/486 [==============================] - 8s 17ms/step - loss: 0.0589 - val_loss: 0.4389\n",
+            "Epoch 10/20\n",
+            "486/486 [==============================] - 8s 16ms/step - loss: 0.0589 - val_loss: 0.4334\n",
+            "Epoch 11/20\n",
+            "486/486 [==============================] - 8s 17ms/step - loss: 0.0589 - val_loss: 0.4344\n",
+            "Epoch 12/20\n",
+            "486/486 [==============================] - 8s 16ms/step - loss: 0.0588 - val_loss: 0.4310\n",
+            "Epoch 13/20\n",
+            "486/486 [==============================] - 9s 18ms/step - loss: 0.0588 - val_loss: 0.4281\n",
+            "Epoch 14/20\n",
+            "486/486 [==============================] - 8s 17ms/step - loss: 0.0588 - val_loss: 0.4380\n",
+            "Epoch 15/20\n",
+            "486/486 [==============================] - 9s 18ms/step - loss: 0.0591 - val_loss: 0.4075\n",
+            "Epoch 16/20\n",
+            "486/486 [==============================] - 8s 17ms/step - loss: 0.0592 - val_loss: 0.4535\n",
+            "Epoch 17/20\n",
+            "486/486 [==============================] - 8s 17ms/step - loss: 0.0589 - val_loss: 0.4571\n",
+            "Epoch 18/20\n",
+            "486/486 [==============================] - 8s 17ms/step - loss: 0.0588 - val_loss: 0.4543\n",
+            "Epoch 19/20\n",
+            "486/486 [==============================] - 8s 16ms/step - loss: 0.0588 - val_loss: 0.4560\n",
+            "Epoch 20/20\n",
+            "486/486 [==============================] - 8s 17ms/step - loss: 0.0588 - val_loss: 0.4517\n",
+            "Epoch 1/20\n",
+            "486/486 [==============================] - 8s 16ms/step - loss: 0.2151 - val_loss: 0.1777\n",
+            "Epoch 2/20\n",
+            "486/486 [==============================] - 8s 16ms/step - loss: 0.1478 - val_loss: 0.1759\n",
+            "Epoch 3/20\n",
+            "486/486 [==============================] - 8s 16ms/step - loss: 0.1473 - val_loss: 0.1755\n",
+            "Epoch 4/20\n",
+            "486/486 [==============================] - 8s 16ms/step - loss: 0.1471 - val_loss: 0.1730\n",
+            "Epoch 5/20\n",
+            "486/486 [==============================] - 8s 16ms/step - loss: 0.1469 - val_loss: 0.1720\n",
+            "Epoch 6/20\n",
+            "486/486 [==============================] - 8s 17ms/step - loss: 0.1469 - val_loss: 0.1708\n",
+            "Epoch 7/20\n",
+            "486/486 [==============================] - 9s 18ms/step - loss: 0.1469 - val_loss: 0.1703\n",
+            "Epoch 8/20\n",
+            "486/486 [==============================] - 8s 16ms/step - loss: 0.1468 - val_loss: 0.1698\n",
+            "Epoch 9/20\n",
+            "486/486 [==============================] - 8s 16ms/step - loss: 0.1468 - val_loss: 0.1691\n",
+            "Epoch 10/20\n",
+            "486/486 [==============================] - 8s 16ms/step - loss: 0.1467 - val_loss: 0.1688\n",
+            "Epoch 11/20\n",
+            "486/486 [==============================] - 8s 17ms/step - loss: 0.1468 - val_loss: 0.1691\n",
+            "Epoch 12/20\n",
+            "486/486 [==============================] - 8s 17ms/step - loss: 0.1467 - val_loss: 0.1696\n",
+            "Epoch 13/20\n",
+            "486/486 [==============================] - 8s 16ms/step - loss: 0.1468 - val_loss: 0.1695\n",
+            "Epoch 14/20\n",
+            "486/486 [==============================] - 9s 18ms/step - loss: 0.1468 - val_loss: 0.1702\n",
+            "Epoch 15/20\n",
+            "486/486 [==============================] - 9s 18ms/step - loss: 0.1468 - val_loss: 0.1704\n",
+            "Epoch 16/20\n",
+            "486/486 [==============================] - 8s 16ms/step - loss: 0.1467 - val_loss: 0.1707\n",
+            "Epoch 17/20\n",
+            "486/486 [==============================] - 8s 17ms/step - loss: 0.1468 - val_loss: 0.1711\n",
+            "Epoch 18/20\n",
+            "486/486 [==============================] - 8s 17ms/step - loss: 0.1468 - val_loss: 0.1712\n",
+            "Epoch 19/20\n",
+            "486/486 [==============================] - 8s 17ms/step - loss: 0.1468 - val_loss: 0.1711\n",
+            "Epoch 20/20\n",
+            "486/486 [==============================] - 8s 17ms/step - loss: 0.1468 - val_loss: 0.1713\n",
+            "Epoch 1/20\n",
+            "486/486 [==============================] - 9s 17ms/step - loss: 0.1324 - val_loss: -4443283.5000\n",
+            "Epoch 2/20\n",
+            "486/486 [==============================] - 8s 17ms/step - loss: 0.0516 - val_loss: -5961384.0000\n",
+            "Epoch 3/20\n",
+            "486/486 [==============================] - 9s 18ms/step - loss: 0.0508 - val_loss: -4944069.5000\n",
+            "Epoch 4/20\n",
+            "486/486 [==============================] - 8s 17ms/step - loss: 0.0504 - val_loss: -6938986.0000\n",
+            "Epoch 5/20\n",
+            "486/486 [==============================] - 8s 17ms/step - loss: 0.0503 - val_loss: -6129322.5000\n",
+            "Epoch 6/20\n",
+            "486/486 [==============================] - 8s 16ms/step - loss: 0.0502 - val_loss: -5560178.5000\n",
+            "Epoch 7/20\n",
+            "486/486 [==============================] - 8s 16ms/step - loss: 0.0501 - val_loss: -6457793.5000\n",
+            "Epoch 8/20\n",
+            "486/486 [==============================] - 8s 17ms/step - loss: 0.0501 - val_loss: -9719878.0000\n",
+            "Epoch 9/20\n",
+            "486/486 [==============================] - 8s 17ms/step - loss: 0.0501 - val_loss: -8942193.0000\n",
+            "Epoch 10/20\n",
+            "486/486 [==============================] - 8s 16ms/step - loss: 0.0500 - val_loss: -8405384.0000\n",
+            "Epoch 11/20\n",
+            "486/486 [==============================] - 8s 16ms/step - loss: 0.0500 - val_loss: -9082640.0000\n",
+            "Epoch 12/20\n",
+            "486/486 [==============================] - 8s 17ms/step - loss: 0.0499 - val_loss: -8742075.0000\n",
+            "Epoch 13/20\n",
+            "486/486 [==============================] - 8s 17ms/step - loss: 0.0500 - val_loss: -10297348.0000\n",
+            "Epoch 14/20\n",
+            "486/486 [==============================] - 9s 18ms/step - loss: 0.0499 - val_loss: -10346137.0000\n",
+            "Epoch 15/20\n",
+            "486/486 [==============================] - 8s 17ms/step - loss: 0.0500 - val_loss: -8345960.0000\n",
+            "Epoch 16/20\n",
+            "486/486 [==============================] - 8s 16ms/step - loss: 0.0499 - val_loss: -10656729.0000\n",
+            "Epoch 17/20\n",
+            "486/486 [==============================] - 8s 17ms/step - loss: 0.0500 - val_loss: -8937771.0000\n",
+            "Epoch 18/20\n",
+            "486/486 [==============================] - 8s 17ms/step - loss: 0.0501 - val_loss: -8923579.0000\n",
+            "Epoch 19/20\n",
+            "486/486 [==============================] - 8s 16ms/step - loss: 0.0498 - val_loss: -7755974.0000\n",
+            "Epoch 20/20\n",
+            "486/486 [==============================] - 8s 16ms/step - loss: 0.0499 - val_loss: -12473388.0000\n"
+          ],
+          "name": "stdout"
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "W9NlA5GaWOO-",
+        "outputId": "962c8bc8-66f2-4e6c-c9e8-127a8ea03826"
+      },
+      "source": [
+        "# creating the encoder model of the denoising autoencoder\n",
+        "# for the raw, normalized and rescaled data\n",
+        "\n",
+        "encoder2_raw = denoising_autoencoder(x_train, x_test)\n",
+        "encoder2_norm = denoising_autoencoder(x_train_norm, x_test_norm)\n",
+        "encoder2_resc = denoising_autoencoder(x_train_resc, x_test_resc)"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "Epoch 1/20\n",
+            "486/486 [==============================] - 9s 18ms/step - loss: 0.4764 - val_loss: 0.4554\n",
+            "Epoch 2/20\n",
+            "486/486 [==============================] - 8s 17ms/step - loss: 0.4282 - val_loss: 0.4502\n",
+            "Epoch 3/20\n",
+            "486/486 [==============================] - 8s 16ms/step - loss: 0.4251 - val_loss: 0.4473\n",
+            "Epoch 4/20\n",
+            "486/486 [==============================] - 8s 16ms/step - loss: 0.4234 - val_loss: 0.4446\n",
+            "Epoch 5/20\n",
+            "486/486 [==============================] - 8s 17ms/step - loss: 0.4220 - val_loss: 0.4449\n",
+            "Epoch 6/20\n",
+            "486/486 [==============================] - 8s 17ms/step - loss: 0.4201 - val_loss: 0.4402\n",
+            "Epoch 7/20\n",
+            "486/486 [==============================] - 8s 17ms/step - loss: 0.4163 - val_loss: 0.4388\n",
+            "Epoch 8/20\n",
+            "486/486 [==============================] - 9s 17ms/step - loss: 0.4146 - val_loss: 0.4381\n",
+            "Epoch 9/20\n",
+            "486/486 [==============================] - 8s 17ms/step - loss: 0.4137 - val_loss: 0.4359\n",
+            "Epoch 10/20\n",
+            "486/486 [==============================] - 8s 16ms/step - loss: 0.4131 - val_loss: 0.4346\n",
+            "Epoch 11/20\n",
+            "486/486 [==============================] - 8s 17ms/step - loss: 0.4122 - val_loss: 0.4345\n",
+            "Epoch 12/20\n",
+            "486/486 [==============================] - 8s 17ms/step - loss: 0.4115 - val_loss: 0.4331\n",
+            "Epoch 13/20\n",
+            "486/486 [==============================] - 8s 17ms/step - loss: 0.4111 - val_loss: 0.4324\n",
+            "Epoch 14/20\n",
+            "486/486 [==============================] - 9s 18ms/step - loss: 0.4104 - val_loss: 0.4328\n",
+            "Epoch 15/20\n",
+            "486/486 [==============================] - 9s 18ms/step - loss: 0.4097 - val_loss: 0.4325\n",
+            "Epoch 16/20\n",
+            "486/486 [==============================] - 8s 16ms/step - loss: 0.4089 - val_loss: 0.4316\n",
+            "Epoch 17/20\n",
+            "486/486 [==============================] - 8s 16ms/step - loss: 0.4083 - val_loss: 0.4312\n",
+            "Epoch 18/20\n",
+            "486/486 [==============================] - 8s 16ms/step - loss: 0.4074 - val_loss: 0.4317\n",
+            "Epoch 19/20\n",
+            "486/486 [==============================] - 8s 16ms/step - loss: 0.4070 - val_loss: 0.4297\n",
+            "Epoch 20/20\n",
+            "486/486 [==============================] - 8s 17ms/step - loss: 0.4061 - val_loss: 0.4291\n",
+            "Epoch 1/20\n",
+            "486/486 [==============================] - 9s 17ms/step - loss: 0.4903 - val_loss: 0.4447\n",
+            "Epoch 2/20\n",
+            "486/486 [==============================] - 8s 16ms/step - loss: 0.4425 - val_loss: 0.4410\n",
+            "Epoch 3/20\n",
+            "486/486 [==============================] - 8s 16ms/step - loss: 0.4390 - val_loss: 0.4375\n",
+            "Epoch 4/20\n",
+            "486/486 [==============================] - 8s 17ms/step - loss: 0.4358 - val_loss: 0.4345\n",
+            "Epoch 5/20\n",
+            "486/486 [==============================] - 8s 17ms/step - loss: 0.4328 - val_loss: 0.4324\n",
+            "Epoch 6/20\n",
+            "486/486 [==============================] - 8s 16ms/step - loss: 0.4309 - val_loss: 0.4309\n",
+            "Epoch 7/20\n",
+            "486/486 [==============================] - 8s 16ms/step - loss: 0.4296 - val_loss: 0.4297\n",
+            "Epoch 8/20\n",
+            "486/486 [==============================] - 8s 17ms/step - loss: 0.4286 - val_loss: 0.4289\n",
+            "Epoch 9/20\n",
+            "486/486 [==============================] - 8s 17ms/step - loss: 0.4273 - val_loss: 0.4281\n",
+            "Epoch 10/20\n",
+            "486/486 [==============================] - 8s 16ms/step - loss: 0.4265 - val_loss: 0.4272\n",
+            "Epoch 11/20\n",
+            "486/486 [==============================] - 8s 17ms/step - loss: 0.4255 - val_loss: 0.4263\n",
+            "Epoch 12/20\n",
+            "486/486 [==============================] - 8s 16ms/step - loss: 0.4246 - val_loss: 0.4253\n",
+            "Epoch 13/20\n",
+            "486/486 [==============================] - 8s 17ms/step - loss: 0.4234 - val_loss: 0.4242\n",
+            "Epoch 14/20\n",
+            "486/486 [==============================] - 8s 17ms/step - loss: 0.4226 - val_loss: 0.4233\n",
+            "Epoch 15/20\n",
+            "486/486 [==============================] - 9s 17ms/step - loss: 0.4217 - val_loss: 0.4225\n",
+            "Epoch 16/20\n",
+            "486/486 [==============================] - 8s 16ms/step - loss: 0.4207 - val_loss: 0.4213\n",
+            "Epoch 17/20\n",
+            "486/486 [==============================] - 8s 16ms/step - loss: 0.4196 - val_loss: 0.4205\n",
+            "Epoch 18/20\n",
+            "486/486 [==============================] - 8s 16ms/step - loss: 0.4189 - val_loss: 0.4197\n",
+            "Epoch 19/20\n",
+            "486/486 [==============================] - 8s 17ms/step - loss: 0.4177 - val_loss: 0.4193\n",
+            "Epoch 20/20\n",
+            "486/486 [==============================] - 8s 17ms/step - loss: 0.4165 - val_loss: 0.4174\n",
+            "Epoch 1/20\n",
+            "486/486 [==============================] - 9s 17ms/step - loss: 0.4682 - val_loss: 0.4168\n",
+            "Epoch 2/20\n",
+            "486/486 [==============================] - 8s 16ms/step - loss: 0.4123 - val_loss: 0.4108\n",
+            "Epoch 3/20\n",
+            "486/486 [==============================] - 8s 16ms/step - loss: 0.4078 - val_loss: 0.4077\n",
+            "Epoch 4/20\n",
+            "486/486 [==============================] - 8s 16ms/step - loss: 0.4054 - val_loss: 0.4064\n",
+            "Epoch 5/20\n",
+            "486/486 [==============================] - 8s 16ms/step - loss: 0.4036 - val_loss: 0.4026\n",
+            "Epoch 6/20\n",
+            "486/486 [==============================] - 8s 16ms/step - loss: 0.4018 - val_loss: 0.4018\n",
+            "Epoch 7/20\n",
+            "486/486 [==============================] - 8s 17ms/step - loss: 0.4004 - val_loss: 0.4002\n",
+            "Epoch 8/20\n",
+            "486/486 [==============================] - 8s 17ms/step - loss: 0.3990 - val_loss: 0.3993\n",
+            "Epoch 9/20\n",
+            "486/486 [==============================] - 8s 16ms/step - loss: 0.3984 - val_loss: 0.3983\n",
+            "Epoch 10/20\n",
+            "486/486 [==============================] - 8s 16ms/step - loss: 0.3971 - val_loss: 0.3977\n",
+            "Epoch 11/20\n",
+            "486/486 [==============================] - 8s 17ms/step - loss: 0.3964 - val_loss: 0.3975\n",
+            "Epoch 12/20\n",
+            "486/486 [==============================] - 8s 16ms/step - loss: 0.3955 - val_loss: 0.3959\n",
+            "Epoch 13/20\n",
+            "486/486 [==============================] - 8s 17ms/step - loss: 0.3948 - val_loss: 0.3966\n",
+            "Epoch 14/20\n",
+            "486/486 [==============================] - 8s 17ms/step - loss: 0.3946 - val_loss: 0.3948\n",
+            "Epoch 15/20\n",
+            "486/486 [==============================] - 8s 16ms/step - loss: 0.3938 - val_loss: 0.3950\n",
+            "Epoch 16/20\n",
+            "486/486 [==============================] - 9s 18ms/step - loss: 0.3935 - val_loss: 0.3941\n",
+            "Epoch 17/20\n",
+            "486/486 [==============================] - 8s 17ms/step - loss: 0.3927 - val_loss: 0.3940\n",
+            "Epoch 18/20\n",
+            "486/486 [==============================] - 8s 17ms/step - loss: 0.3922 - val_loss: 0.3938\n",
+            "Epoch 19/20\n",
+            "486/486 [==============================] - 8s 17ms/step - loss: 0.3917 - val_loss: 0.3922\n",
+            "Epoch 20/20\n",
+            "486/486 [==============================] - 8s 17ms/step - loss: 0.3910 - val_loss: 0.3915\n"
+          ],
+          "name": "stdout"
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "75Uxc1-vWwO3",
+        "outputId": "45e8c4f2-982d-446f-dedf-646c3631bd57"
+      },
+      "source": [
+        "# creating the encoder model of sparse autoencoder\n",
+        "# for the raw, normalized and rescaled data\n",
+        "\n",
+        "encoder3_raw = sparse_autoencoder(x_train, x_test)\n",
+        "encoder3_norm = sparse_autoencoder(x_train_norm, x_test_norm)\n",
+        "encoder3_resc = sparse_autoencoder(x_train_resc, x_test_resc) "
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "Epoch 1/20\n",
+            "486/486 [==============================] - 2s 3ms/step - loss: 0.3317 - val_loss: 0.2602\n",
+            "Epoch 2/20\n",
+            "486/486 [==============================] - 1s 2ms/step - loss: 0.0782 - val_loss: 0.3032\n",
+            "Epoch 3/20\n",
+            "486/486 [==============================] - 1s 2ms/step - loss: 0.0689 - val_loss: 0.3246\n",
+            "Epoch 4/20\n",
+            "486/486 [==============================] - 1s 2ms/step - loss: 0.0651 - val_loss: 0.3365\n",
+            "Epoch 5/20\n",
+            "486/486 [==============================] - 1s 2ms/step - loss: 0.0632 - val_loss: 0.3440\n",
+            "Epoch 6/20\n",
+            "486/486 [==============================] - 1s 2ms/step - loss: 0.0623 - val_loss: 0.3490\n",
+            "Epoch 7/20\n",
+            "486/486 [==============================] - 1s 2ms/step - loss: 0.0615 - val_loss: 0.3512\n",
+            "Epoch 8/20\n",
+            "486/486 [==============================] - 1s 2ms/step - loss: 0.0611 - val_loss: 0.3542\n",
+            "Epoch 9/20\n",
+            "486/486 [==============================] - 1s 2ms/step - loss: 0.0609 - val_loss: 0.3549\n",
+            "Epoch 10/20\n",
+            "486/486 [==============================] - 1s 2ms/step - loss: 0.0607 - val_loss: 0.3547\n",
+            "Epoch 11/20\n",
+            "486/486 [==============================] - 1s 2ms/step - loss: 0.0605 - val_loss: 0.3543\n",
+            "Epoch 12/20\n",
+            "486/486 [==============================] - 1s 2ms/step - loss: 0.0604 - val_loss: 0.3536\n",
+            "Epoch 13/20\n",
+            "486/486 [==============================] - 1s 3ms/step - loss: 0.0602 - val_loss: 0.3542\n",
+            "Epoch 14/20\n",
+            "486/486 [==============================] - 1s 2ms/step - loss: 0.0601 - val_loss: 0.3581\n",
+            "Epoch 15/20\n",
+            "486/486 [==============================] - 1s 2ms/step - loss: 0.0600 - val_loss: 0.3604\n",
+            "Epoch 16/20\n",
+            "486/486 [==============================] - 1s 2ms/step - loss: 0.0599 - val_loss: 0.3658\n",
+            "Epoch 17/20\n",
+            "486/486 [==============================] - 1s 2ms/step - loss: 0.0599 - val_loss: 0.3695\n",
+            "Epoch 18/20\n",
+            "486/486 [==============================] - 1s 2ms/step - loss: 0.0597 - val_loss: 0.3740\n",
+            "Epoch 19/20\n",
+            "486/486 [==============================] - 1s 2ms/step - loss: 0.0597 - val_loss: 0.3798\n",
+            "Epoch 20/20\n",
+            "486/486 [==============================] - 1s 2ms/step - loss: 0.0596 - val_loss: 0.3857\n",
+            "Epoch 1/20\n",
+            "486/486 [==============================] - 2s 3ms/step - loss: 0.3898 - val_loss: 0.1716\n",
+            "Epoch 2/20\n",
+            "486/486 [==============================] - 1s 2ms/step - loss: 0.1617 - val_loss: 0.1686\n",
+            "Epoch 3/20\n",
+            "486/486 [==============================] - 1s 2ms/step - loss: 0.1558 - val_loss: 0.1673\n",
+            "Epoch 4/20\n",
+            "486/486 [==============================] - 1s 2ms/step - loss: 0.1525 - val_loss: 0.1673\n",
+            "Epoch 5/20\n",
+            "486/486 [==============================] - 1s 2ms/step - loss: 0.1502 - val_loss: 0.1689\n",
+            "Epoch 6/20\n",
+            "486/486 [==============================] - 1s 2ms/step - loss: 0.1495 - val_loss: 0.1701\n",
+            "Epoch 7/20\n",
+            "486/486 [==============================] - 1s 2ms/step - loss: 0.1492 - val_loss: 0.1708\n",
+            "Epoch 8/20\n",
+            "486/486 [==============================] - 1s 2ms/step - loss: 0.1489 - val_loss: 0.1713\n",
+            "Epoch 9/20\n",
+            "486/486 [==============================] - 1s 2ms/step - loss: 0.1487 - val_loss: 0.1719\n",
+            "Epoch 10/20\n",
+            "486/486 [==============================] - 1s 2ms/step - loss: 0.1485 - val_loss: 0.1723\n",
+            "Epoch 11/20\n",
+            "486/486 [==============================] - 1s 2ms/step - loss: 0.1484 - val_loss: 0.1729\n",
+            "Epoch 12/20\n",
+            "486/486 [==============================] - 1s 2ms/step - loss: 0.1482 - val_loss: 0.1732\n",
+            "Epoch 13/20\n",
+            "486/486 [==============================] - 1s 2ms/step - loss: 0.1481 - val_loss: 0.1735\n",
+            "Epoch 14/20\n",
+            "486/486 [==============================] - 1s 2ms/step - loss: 0.1479 - val_loss: 0.1737\n",
+            "Epoch 15/20\n",
+            "486/486 [==============================] - 1s 2ms/step - loss: 0.1477 - val_loss: 0.1737\n",
+            "Epoch 16/20\n",
+            "486/486 [==============================] - 1s 3ms/step - loss: 0.1477 - val_loss: 0.1739\n",
+            "Epoch 17/20\n",
+            "486/486 [==============================] - 1s 2ms/step - loss: 0.1476 - val_loss: 0.1744\n",
+            "Epoch 18/20\n",
+            "486/486 [==============================] - 1s 2ms/step - loss: 0.1475 - val_loss: 0.1747\n",
+            "Epoch 19/20\n",
+            "486/486 [==============================] - 1s 2ms/step - loss: 0.1475 - val_loss: 0.1752\n",
+            "Epoch 20/20\n",
+            "486/486 [==============================] - 1s 2ms/step - loss: 0.1474 - val_loss: 0.1757\n",
+            "Epoch 1/20\n",
+            "486/486 [==============================] - 2s 3ms/step - loss: 0.3138 - val_loss: -873671.7500\n",
+            "Epoch 2/20\n",
+            "486/486 [==============================] - 1s 2ms/step - loss: 0.0732 - val_loss: -1902484.7500\n",
+            "Epoch 3/20\n",
+            "486/486 [==============================] - 1s 2ms/step - loss: 0.0609 - val_loss: -2899412.7500\n",
+            "Epoch 4/20\n",
+            "486/486 [==============================] - 1s 2ms/step - loss: 0.0571 - val_loss: -3568577.5000\n",
+            "Epoch 5/20\n",
+            "486/486 [==============================] - 1s 2ms/step - loss: 0.0548 - val_loss: -4348196.0000\n",
+            "Epoch 6/20\n",
+            "486/486 [==============================] - 1s 2ms/step - loss: 0.0538 - val_loss: -5123258.0000\n",
+            "Epoch 7/20\n",
+            "486/486 [==============================] - 1s 2ms/step - loss: 0.0530 - val_loss: -5703970.5000\n",
+            "Epoch 8/20\n",
+            "486/486 [==============================] - 1s 2ms/step - loss: 0.0527 - val_loss: -6171242.5000\n",
+            "Epoch 9/20\n",
+            "486/486 [==============================] - 1s 2ms/step - loss: 0.0523 - val_loss: -6551863.5000\n",
+            "Epoch 10/20\n",
+            "486/486 [==============================] - 1s 2ms/step - loss: 0.0521 - val_loss: -6990756.5000\n",
+            "Epoch 11/20\n",
+            "486/486 [==============================] - 1s 2ms/step - loss: 0.0518 - val_loss: -7460551.0000\n",
+            "Epoch 12/20\n",
+            "486/486 [==============================] - 1s 2ms/step - loss: 0.0517 - val_loss: -7885983.5000\n",
+            "Epoch 13/20\n",
+            "486/486 [==============================] - 1s 2ms/step - loss: 0.0515 - val_loss: -8569595.0000\n",
+            "Epoch 14/20\n",
+            "486/486 [==============================] - 1s 2ms/step - loss: 0.0514 - val_loss: -9000987.0000\n",
+            "Epoch 15/20\n",
+            "486/486 [==============================] - 1s 2ms/step - loss: 0.0512 - val_loss: -9218530.0000\n",
+            "Epoch 16/20\n",
+            "486/486 [==============================] - 1s 2ms/step - loss: 0.0511 - val_loss: -9602488.0000\n",
+            "Epoch 17/20\n",
+            "486/486 [==============================] - 1s 3ms/step - loss: 0.0510 - val_loss: -9893114.0000\n",
+            "Epoch 18/20\n",
+            "486/486 [==============================] - 1s 2ms/step - loss: 0.0510 - val_loss: -10532187.0000\n",
+            "Epoch 19/20\n",
+            "486/486 [==============================] - 1s 2ms/step - loss: 0.0508 - val_loss: -10510487.0000\n",
+            "Epoch 20/20\n",
+            "486/486 [==============================] - 1s 2ms/step - loss: 0.0508 - val_loss: -11094170.0000\n"
+          ],
+          "name": "stdout"
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "PmbXNlBbw2-3"
+      },
+      "source": [
+        "# data transformation - encoder1\n",
+        "x_train_enc_1, x_test_enc_1 = encoder_transformation(encoder1_raw, x_train, x_test)\n",
+        "x_train_norm_enc_1, x_test_norm_enc_1 = encoder_transformation(encoder1_norm, x_train_norm, x_test_norm) \n",
+        "x_train_resc_enc_1, x_test_resc_enc_1 = encoder_transformation(encoder1_resc, x_train_resc, x_test_resc)"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "rmSH-di8mDuS"
+      },
+      "source": [
+        "# data transformation - encoder2\n",
+        "x_train_enc_2, x_test_enc_2 = encoder_transformation(encoder2_raw, x_train, x_test)\n",
+        "x_train_norm_enc_2, x_test_norm_enc_2 = encoder_transformation(encoder2_norm, x_train_norm, x_test_norm) \n",
+        "x_train_resc_enc_2, x_test_resc_enc_2 = encoder_transformation(encoder2_resc, x_train_resc, x_test_resc)"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "ZiqH0aw2mTcM"
+      },
+      "source": [
+        "# data transformation - encoder3\n",
+        "x_train_enc_3, x_test_enc_3 = encoder_transformation(encoder3_raw, x_train, x_test)\n",
+        "x_train_norm_enc_3, x_test_norm_enc_3 = encoder_transformation(encoder3_norm, x_train_norm, x_test_norm) \n",
+        "x_train_resc_enc_3, x_test_resc_enc_3 = encoder_transformation(encoder3_resc, x_train_resc, x_test_resc)"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "5YU7E9DwECvK"
+      },
+      "source": [
+        "FITTING MODELS TO EXTRACTED DATA"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "WVjBiGd-V_Y7",
+        "outputId": "e22fc084-20b2-4568-db97-839e3c7a62b1"
+      },
+      "source": [
+        "# encoder1 - raw data\n",
+        "compare_algorithms(x_train_enc_1, y_train, x_test_enc_1, y_test)"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "LR: train_acc: 0.996 / test_acc: 0.529\n",
+            "LDA: train_acc: 0.976 / test_acc: 0.840\n",
+            "KNN: train_acc: 1.000 / test_acc: 0.533\n",
+            "SVC: train_acc: 0.998 / test_acc: 0.533\n",
+            "LnSVC: train_acc: 0.996 / test_acc: 0.532\n"
+          ],
+          "name": "stdout"
+        },
+        {
+          "output_type": "stream",
+          "text": [
+            "/usr/local/lib/python3.6/dist-packages/sklearn/svm/_base.py:947: ConvergenceWarning: Liblinear failed to converge, increase the number of iterations.\n",
+            "  \"the number of iterations.\", ConvergenceWarning)\n"
+          ],
+          "name": "stderr"
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "pSIjofEq-eLq",
+        "outputId": "dec8bf3b-e9e7-4c47-f7ee-55fbc10a082b"
+      },
+      "source": [
+        "# encoder1 - normalized data\n",
+        "compare_algorithms(x_train_norm_enc_1, y_train, x_test_norm_enc_1, y_test)"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "LR: train_acc: 0.971 / test_acc: 0.791\n",
+            "LDA: train_acc: 0.953 / test_acc: 0.875\n",
+            "KNN: train_acc: 1.000 / test_acc: 0.533\n",
+            "SVC: train_acc: 0.997 / test_acc: 0.528\n",
+            "LnSVC: train_acc: 0.974 / test_acc: 0.769\n"
+          ],
+          "name": "stdout"
+        },
+        {
+          "output_type": "stream",
+          "text": [
+            "/usr/local/lib/python3.6/dist-packages/sklearn/svm/_base.py:947: ConvergenceWarning: Liblinear failed to converge, increase the number of iterations.\n",
+            "  \"the number of iterations.\", ConvergenceWarning)\n"
+          ],
+          "name": "stderr"
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "pdV97uaiWyXc",
+        "outputId": "b8bb5769-76f7-4fdd-92b8-6c7ffd3b5b9b"
+      },
+      "source": [
+        "# encoder1 - rescaled data\n",
+        "compare_algorithms(x_train_resc_enc_1, y_train, x_test_resc_enc_1, y_test)"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "LR: train_acc: 0.989 / test_acc: 0.516\n",
+            "LDA: train_acc: 0.973 / test_acc: 0.543\n",
+            "KNN: train_acc: 1.000 / test_acc: 0.500\n",
+            "SVC: train_acc: 0.999 / test_acc: 0.500\n",
+            "LnSVC: train_acc: 0.988 / test_acc: 0.516\n"
+          ],
+          "name": "stdout"
+        },
+        {
+          "output_type": "stream",
+          "text": [
+            "/usr/local/lib/python3.6/dist-packages/sklearn/svm/_base.py:947: ConvergenceWarning: Liblinear failed to converge, increase the number of iterations.\n",
+            "  \"the number of iterations.\", ConvergenceWarning)\n"
+          ],
+          "name": "stderr"
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "T-aID_07c8Sa",
+        "outputId": "18319c11-1dc7-4d00-b0b9-c43f93333020"
+      },
+      "source": [
+        "# encoder2 - raw data\n",
+        "compare_algorithms(x_train_enc_2, y_train, x_test_enc_2, y_test)"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "LR: train_acc: 0.989 / test_acc: 0.495\n",
+            "LDA: train_acc: 0.977 / test_acc: 0.940\n",
+            "KNN: train_acc: 1.000 / test_acc: 0.529\n",
+            "SVC: train_acc: 0.997 / test_acc: 0.529\n",
+            "LnSVC: train_acc: 0.990 / test_acc: 0.496\n"
+          ],
+          "name": "stdout"
+        },
+        {
+          "output_type": "stream",
+          "text": [
+            "/usr/local/lib/python3.6/dist-packages/sklearn/svm/_base.py:947: ConvergenceWarning: Liblinear failed to converge, increase the number of iterations.\n",
+            "  \"the number of iterations.\", ConvergenceWarning)\n"
+          ],
+          "name": "stderr"
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "_kyJudLdc8KJ",
+        "outputId": "2b4c62a0-c832-428c-e24c-9c830e183fb9"
+      },
+      "source": [
+        "# encoder2 - normalized data\n",
+        "compare_algorithms(x_train_norm_enc_2, y_train, x_test_norm_enc_2, y_test)"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "LR: train_acc: 0.986 / test_acc: 0.864\n",
+            "LDA: train_acc: 0.974 / test_acc: 0.500\n",
+            "KNN: train_acc: 0.999 / test_acc: 0.841\n",
+            "SVC: train_acc: 0.987 / test_acc: 0.690\n",
+            "LnSVC: train_acc: 0.990 / test_acc: 0.956\n"
+          ],
+          "name": "stdout"
+        },
+        {
+          "output_type": "stream",
+          "text": [
+            "/usr/local/lib/python3.6/dist-packages/sklearn/svm/_base.py:947: ConvergenceWarning: Liblinear failed to converge, increase the number of iterations.\n",
+            "  \"the number of iterations.\", ConvergenceWarning)\n"
+          ],
+          "name": "stderr"
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "uo74Tuqoc8O1",
+        "outputId": "04971c12-5c5c-447d-c5b1-1c45a0887eb1"
+      },
+      "source": [
+        "# encoder2 - rescaled data\n",
+        "compare_algorithms(x_train_resc_enc_2, y_train, x_test_resc_enc_2, y_test)"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "LR: train_acc: 0.995 / test_acc: 0.510\n",
+            "LDA: train_acc: 0.980 / test_acc: 0.468\n",
+            "KNN: train_acc: 1.000 / test_acc: 0.500\n",
+            "SVC: train_acc: 0.998 / test_acc: 0.500\n",
+            "LnSVC: train_acc: 0.995 / test_acc: 0.506\n"
+          ],
+          "name": "stdout"
+        },
+        {
+          "output_type": "stream",
+          "text": [
+            "/usr/local/lib/python3.6/dist-packages/sklearn/svm/_base.py:947: ConvergenceWarning: Liblinear failed to converge, increase the number of iterations.\n",
+            "  \"the number of iterations.\", ConvergenceWarning)\n"
+          ],
+          "name": "stderr"
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "ZN7rn6qkci3P",
+        "outputId": "0e8f8671-b4f8-41b5-ba9f-b6fec6f32f14"
+      },
+      "source": [
+        "# encoder3 - raw data\n",
+        "compare_algorithms(x_train_enc_3, y_train, x_test_enc_3, y_test)"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "LR: train_acc: 0.992 / test_acc: 0.945\n",
+            "LDA: train_acc: 0.977 / test_acc: 0.944\n",
+            "KNN: train_acc: 1.000 / test_acc: 0.633\n",
+            "SVC: train_acc: 0.997 / test_acc: 0.896\n",
+            "LnSVC: train_acc: 0.992 / test_acc: 0.848\n"
+          ],
+          "name": "stdout"
+        },
+        {
+          "output_type": "stream",
+          "text": [
+            "/usr/local/lib/python3.6/dist-packages/sklearn/svm/_base.py:947: ConvergenceWarning: Liblinear failed to converge, increase the number of iterations.\n",
+            "  \"the number of iterations.\", ConvergenceWarning)\n"
+          ],
+          "name": "stderr"
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "r7qMWnRsHsjp",
+        "outputId": "f0a05fba-d867-47fc-9d13-3bbc94d6f87c"
+      },
+      "source": [
+        "# encoder3 - normalized data\n",
+        "compare_algorithms(x_train_norm_enc_3, y_train, x_test_norm_enc_3, y_test)"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "LR: train_acc: 0.991 / test_acc: 0.859\n",
+            "LDA: train_acc: 0.978 / test_acc: 0.947\n",
+            "KNN: train_acc: 0.999 / test_acc: 0.529\n",
+            "SVC: train_acc: 0.993 / test_acc: 0.526\n",
+            "LnSVC: train_acc: 0.992 / test_acc: 0.860\n"
+          ],
+          "name": "stdout"
+        },
+        {
+          "output_type": "stream",
+          "text": [
+            "/usr/local/lib/python3.6/dist-packages/sklearn/svm/_base.py:947: ConvergenceWarning: Liblinear failed to converge, increase the number of iterations.\n",
+            "  \"the number of iterations.\", ConvergenceWarning)\n"
+          ],
+          "name": "stderr"
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "bCNeSJ7Rcjl0",
+        "outputId": "62e96e0d-e9af-43d5-86f9-7990471a666a"
+      },
+      "source": [
+        "# encoder3 - rescaled data\n",
+        "compare_algorithms(x_train_resc_enc_3, y_train, x_test_resc_enc_3, y_test)"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "LR: train_acc: 0.995 / test_acc: 0.473\n",
+            "LDA: train_acc: 0.982 / test_acc: 0.917\n",
+            "KNN: train_acc: 1.000 / test_acc: 0.500\n",
+            "SVC: train_acc: 0.998 / test_acc: 0.499\n",
+            "LnSVC: train_acc: 0.994 / test_acc: 0.470\n"
+          ],
+          "name": "stdout"
+        },
+        {
+          "output_type": "stream",
+          "text": [
+            "/usr/local/lib/python3.6/dist-packages/sklearn/svm/_base.py:947: ConvergenceWarning: Liblinear failed to converge, increase the number of iterations.\n",
+            "  \"the number of iterations.\", ConvergenceWarning)\n"
+          ],
+          "name": "stderr"
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "2FSNpsVKAzcr"
+      },
+      "source": [
+        "COMBINE ORIGINAL WITH EXTRACTED FEATURES (NORMALIZED DATA, ENCODERS 1 AND 3)\n",
+        "\n"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "KZQcfi6QBeWS"
+      },
+      "source": [
+        "# FULL SET OF ORIGINAL FEATURES + EXTRACTED FEATURES\n",
+        "# 82 + 20 = 102 FEATURES "
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "a6UW1RHbBNIC"
+      },
+      "source": [
+        "# stacked encoder\n",
+        "x_train_full_enc_1, x_test_full_enc_1 = mixed_data(x_train_norm, x_train_norm_enc_1, x_test_norm, x_test_norm_enc_1)\n",
+        "# sparse encoder\n",
+        "x_train_full_enc_3, x_test_full_enc_3 = mixed_data(x_train_norm, x_train_norm_enc_3, x_test_norm, x_test_norm_enc_3)"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "C4NbPBKbFOVc"
+      },
+      "source": [
+        "# SELECTED SET OF ORIGINAL FEATURES (EXTRA TREES CLASSIFIER) + EXTRACTED FEATURES\n",
+        "# 10 + 20 = 30 FEATURES"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "ztKfW142F64f"
+      },
+      "source": [
+        "# stacked encoder\n",
+        "x_train_sel_enc_1, x_test_sel_enc_1 = mixed_data(extree_train_features_norm, x_train_norm_enc_1, extree_test_features_norm, x_test_norm_enc_1)\n",
+        "# sparse encoder\n",
+        "x_train_sel_enc_3, x_test_sel_enc_3 = mixed_data(extree_train_features_norm, x_train_norm_enc_3, extree_test_features_norm, x_test_norm_enc_3)"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "L0pvT4MuIhmS"
+      },
+      "source": [
+        "COMBINE ORIGINAL WITH EXTRACTED FEATURES (NORMALIZED DATA, ENCODERS 1 AND 3) - MODEL EVALUATION (LR, LDA, LnSVC)"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "csivE4JDJMgE"
+      },
+      "source": [
+        "# FULL SET OF ORIGINAL FEATURES + EXTRACTED FEATURES\n",
+        "# 82 + 20 = 102 FEATURES "
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "LtfDeNOGKP0t",
+        "outputId": "988765ba-84fc-4496-e3e9-26a8d8f70e41"
+      },
+      "source": [
+        "# stacked encoder\n",
+        "compare_algorithms_2(x_train_full_enc_1, y_train, x_test_full_enc_1, y_test)"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "LR:\n",
+            "[[18505  1574]\n",
+            " [  899 19180]]\n",
+            "acc:  0.938  / DR:  0.955  / Prec:  0.924  / FAR:  0.078  / FNR:  0.045\n",
+            "Type I error:  1574  / Type II error:  899\n",
+            "TBM:  2.37\n",
+            "TTM:  0.13 \n",
+            "\n",
+            "LDA:\n",
+            "[[ 2573 17506]\n",
+            " [ 4158 15921]]\n",
+            "acc:  0.461  / DR:  0.793  / Prec:  0.476  / FAR:  0.872  / FNR:  0.207\n",
+            "Type I error:  17506  / Type II error:  4158\n",
+            "TBM:  2.49\n",
+            "TTM:  0.11 \n",
+            "\n",
+            "LnSVC:\n",
+            "[[19842   237]\n",
+            " [18635  1444]]\n",
+            "acc:  0.53  / DR:  0.072  / Prec:  0.859  / FAR:  0.012  / FNR:  0.928\n",
+            "Type I error:  237  / Type II error:  18635\n",
+            "TBM:  11.48\n",
+            "TTM:  0.12 \n",
+            "\n"
+          ],
+          "name": "stdout"
+        },
+        {
+          "output_type": "stream",
+          "text": [
+            "/usr/local/lib/python3.6/dist-packages/sklearn/svm/_base.py:947: ConvergenceWarning: Liblinear failed to converge, increase the number of iterations.\n",
+            "  \"the number of iterations.\", ConvergenceWarning)\n"
+          ],
+          "name": "stderr"
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "VQlfVQM4KP-f",
+        "outputId": "a303f5ac-4cdc-4b5d-bc7c-75916f2a3637"
+      },
+      "source": [
+        "# sparse encoder\n",
+        "compare_algorithms_2(x_train_full_enc_3, y_train, x_test_full_enc_3, y_test)"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "LR:\n",
+            "[[19140   939]\n",
+            " [ 4806 15273]]\n",
+            "acc:  0.857  / DR:  0.761  / Prec:  0.942  / FAR:  0.047  / FNR:  0.239\n",
+            "Type I error:  939  / Type II error:  4806\n",
+            "TBM:  2.09\n",
+            "TTM:  0.12 \n",
+            "\n",
+            "LDA:\n",
+            "[[17966  2113]\n",
+            " [    1 20078]]\n",
+            "acc:  0.947  / DR:  1.0  / Prec:  0.905  / FAR:  0.105  / FNR:  0.0\n",
+            "Type I error:  2113  / Type II error:  1\n",
+            "TBM:  2.62\n",
+            "TTM:  0.12 \n",
+            "\n",
+            "LnSVC:\n",
+            "[[19377   702]\n",
+            " [10934  9145]]\n",
+            "acc:  0.71  / DR:  0.455  / Prec:  0.929  / FAR:  0.035  / FNR:  0.545\n",
+            "Type I error:  702  / Type II error:  10934\n",
+            "TBM:  8.9\n",
+            "TTM:  0.12 \n",
+            "\n"
+          ],
+          "name": "stdout"
+        },
+        {
+          "output_type": "stream",
+          "text": [
+            "/usr/local/lib/python3.6/dist-packages/sklearn/svm/_base.py:947: ConvergenceWarning: Liblinear failed to converge, increase the number of iterations.\n",
+            "  \"the number of iterations.\", ConvergenceWarning)\n"
+          ],
+          "name": "stderr"
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "HTPzlXEkKDXu"
+      },
+      "source": [
+        "# SELECTED SET OF ORIGINAL FEATURES (EXTRA TREES CLASSIFIER) + EXTRACTED FEATURES\n",
+        "# 10 + 20 = 30 FEATURES"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "CcMEcyDrKRC9",
+        "outputId": "8d4d4ade-030b-4676-c3db-1fccd351da25"
+      },
+      "source": [
+        "# stacked encoder\n",
+        "compare_algorithms_2(x_train_sel_enc_1, y_train, x_test_sel_enc_1, y_test)"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "LR:\n",
+            "[[18360  1719]\n",
+            " [   49 20030]]\n",
+            "acc:  0.956  / DR:  0.998  / Prec:  0.921  / FAR:  0.086  / FNR:  0.002\n",
+            "Type I error:  1719  / Type II error:  49\n",
+            "TBM:  1.16\n",
+            "TTM:  0.12 \n",
+            "\n",
+            "LDA:\n",
+            "[[17213  2866]\n",
+            " [   23 20056]]\n",
+            "acc:  0.928  / DR:  0.999  / Prec:  0.875  / FAR:  0.143  / FNR:  0.001\n",
+            "Type I error:  2866  / Type II error:  23\n",
+            "TBM:  0.42\n",
+            "TTM:  0.15 \n",
+            "\n",
+            "LnSVC:\n",
+            "[[19670   409]\n",
+            " [ 1258 18821]]\n",
+            "acc:  0.958  / DR:  0.937  / Prec:  0.979  / FAR:  0.02  / FNR:  0.063\n",
+            "Type I error:  409  / Type II error:  1258\n",
+            "TBM:  7.09\n",
+            "TTM:  0.11 \n",
+            "\n"
+          ],
+          "name": "stdout"
+        },
+        {
+          "output_type": "stream",
+          "text": [
+            "/usr/local/lib/python3.6/dist-packages/sklearn/svm/_base.py:947: ConvergenceWarning: Liblinear failed to converge, increase the number of iterations.\n",
+            "  \"the number of iterations.\", ConvergenceWarning)\n"
+          ],
+          "name": "stderr"
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "nQRuS9cyKRMR",
+        "outputId": "4cebae8e-187d-4638-f734-6955de9d7c51"
+      },
+      "source": [
+        "# sparse encoder\n",
+        "compare_algorithms_2(x_train_sel_enc_3, y_train, x_test_sel_enc_3, y_test)"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "LR:\n",
+            "[[19262   817]\n",
+            " [ 4871 15208]]\n",
+            "acc:  0.858  / DR:  0.757  / Prec:  0.949  / FAR:  0.041  / FNR:  0.243\n",
+            "Type I error:  817  / Type II error:  4871\n",
+            "TBM:  0.97\n",
+            "TTM:  0.14 \n",
+            "\n",
+            "LDA:\n",
+            "[[18121  1958]\n",
+            " [ 4751 15328]]\n",
+            "acc:  0.833  / DR:  0.763  / Prec:  0.887  / FAR:  0.098  / FNR:  0.237\n",
+            "Type I error:  1958  / Type II error:  4751\n",
+            "TBM:  0.42\n",
+            "TTM:  0.13 \n",
+            "\n",
+            "LnSVC:\n",
+            "[[19377   702]\n",
+            " [12880  7199]]\n",
+            "acc:  0.662  / DR:  0.359  / Prec:  0.911  / FAR:  0.035  / FNR:  0.641\n",
+            "Type I error:  702  / Type II error:  12880\n",
+            "TBM:  3.74\n",
+            "TTM:  0.11 \n",
+            "\n"
+          ],
+          "name": "stdout"
+        },
+        {
+          "output_type": "stream",
+          "text": [
+            "/usr/local/lib/python3.6/dist-packages/sklearn/svm/_base.py:947: ConvergenceWarning: Liblinear failed to converge, increase the number of iterations.\n",
+            "  \"the number of iterations.\", ConvergenceWarning)\n"
+          ],
+          "name": "stderr"
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "Kp6TYNzmJQOg"
+      },
+      "source": [
+        "FEATURE SELECTION (EXTRA TREES CLASSIFIER) ON COMBINATION OF ORIGINAL WITH EXTRACTED FEATURES (NORMALIZED DATA)\n"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "LZwO1_GFg_6_"
+      },
+      "source": [
+        "# SELECTED 10 FEATURES FROM THE FULL SET OF ORIGINAL FEATURES + EXTRACTED FEATURES\n",
+        "# 82+20 -->10"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "XUBkuV6vgQSw",
+        "outputId": "2b9c3a4e-9dc0-449f-8728-9d213fb3f2fe"
+      },
+      "source": [
+        "# stacked encoder\n",
+        "sel_x_train_full_enc_1, sel_x_test_full_enc_1 = extra_trees_classifier(x_train_full_enc_1, y_train, x_test_full_enc_1)\n",
+        "\n",
+        "# sparse encoder\n",
+        "sel_x_train_full_enc_3, sel_x_test_full_enc_3 = extra_trees_classifier(x_train_full_enc_3, y_train, x_test_full_enc_3)"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "    Specs     Score\n",
+            "84     84  0.098973\n",
+            "26     26  0.076498\n",
+            "97     97  0.071801\n",
+            "22     22  0.069913\n",
+            "28     28  0.045195\n",
+            "15     15  0.044716\n",
+            "16     16  0.042001\n",
+            "86     86  0.031079\n",
+            "96     96  0.030714\n",
+            "85     85  0.027378\n",
+            "    Specs     Score\n",
+            "26     26  0.097214\n",
+            "15     15  0.067973\n",
+            "86     86  0.065389\n",
+            "28     28  0.052214\n",
+            "84     84  0.044918\n",
+            "22     22  0.044431\n",
+            "13     13  0.042150\n",
+            "16     16  0.035081\n",
+            "23     23  0.031826\n",
+            "93     93  0.031593\n"
+          ],
+          "name": "stdout"
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "gNDiJ0rAhJB9"
+      },
+      "source": [
+        "# SELECTED 10 FEATURES FROM THE SELECTED SET OF ORIGINAL FEATURES + EXTRACTED FEATURES\n",
+        "# 10+20 --> 10"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "j7LMXPvvhUFs",
+        "outputId": "7119d344-180d-4528-8ea9-336314133d25"
+      },
+      "source": [
+        "# stacked encoder\n",
+        "sel_x_train_sel_enc_1, sel_x_test_sel_enc_1 = extra_trees_classifier(x_train_sel_enc_1, y_train, x_test_sel_enc_1)\n",
+        "\n",
+        "# sparse encoder\n",
+        "sel_x_train_sel_enc_3, sel_x_test_sel_enc_3 = extra_trees_classifier(x_train_sel_enc_3, y_train, x_test_sel_enc_3)"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "    Specs     Score\n",
+            "2       2  0.120965\n",
+            "12     12  0.110171\n",
+            "1       1  0.075842\n",
+            "8       8  0.072121\n",
+            "0       0  0.065215\n",
+            "3       3  0.053265\n",
+            "25     25  0.052744\n",
+            "4       4  0.049522\n",
+            "13     13  0.044972\n",
+            "5       5  0.034880\n",
+            "    Specs     Score\n",
+            "14     14  0.105812\n",
+            "2       2  0.094613\n",
+            "1       1  0.079988\n",
+            "12     12  0.078467\n",
+            "8       8  0.073209\n",
+            "13     13  0.062569\n",
+            "0       0  0.055494\n",
+            "5       5  0.050965\n",
+            "4       4  0.037588\n",
+            "3       3  0.035635\n"
+          ],
+          "name": "stdout"
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "l5_JmB9FkQNK"
+      },
+      "source": [
+        "FEATURE SELECTION (EXTRA TREES CLASSIFIER) ON COMBINATION OF ORIGINAL WITH EXTRACTED FEATURES (NORMALIZED DATA) - MODEL EVALUATION (LR, LDA, LnSVC)"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "KVdJklflhUCQ"
+      },
+      "source": [
+        "# SELECTED 10 FEATURES FROM THE FULL SET OF ORIGINAL FEATURES + EXTRACTED \n",
+        "# 82 + 20 --> 10"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "zNqDurPelpGy",
+        "outputId": "2d859c83-1f76-4a30-b613-d60def58f25b"
+      },
+      "source": [
+        "# stacked encoder\n",
+        "compare_algorithms_2(sel_x_train_full_enc_1, y_train, sel_x_test_full_enc_1, y_test)"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "LR:\n",
+            "[[18349  1730]\n",
+            " [ 9976 10103]]\n",
+            "acc:  0.709  / DR:  0.503  / Prec:  0.854  / FAR:  0.086  / FNR:  0.497\n",
+            "Type I error:  1730  / Type II error:  9976\n",
+            "TBM:  0.45\n",
+            "TTM:  0.12 \n",
+            "\n",
+            "LDA:\n",
+            "[[18426  1653]\n",
+            " [ 1380 18699]]\n",
+            "acc:  0.924  / DR:  0.931  / Prec:  0.919  / FAR:  0.082  / FNR:  0.069\n",
+            "Type I error:  1653  / Type II error:  1380\n",
+            "TBM:  0.16\n",
+            "TTM:  0.12 \n",
+            "\n",
+            "LnSVC:\n",
+            "[[18433  1646]\n",
+            " [11586  8493]]\n",
+            "acc:  0.671  / DR:  0.423  / Prec:  0.838  / FAR:  0.082  / FNR:  0.577\n",
+            "Type I error:  1646  / Type II error:  11586\n",
+            "TBM:  5.55\n",
+            "TTM:  0.11 \n",
+            "\n"
+          ],
+          "name": "stdout"
+        },
+        {
+          "output_type": "stream",
+          "text": [
+            "/usr/local/lib/python3.6/dist-packages/sklearn/svm/_base.py:947: ConvergenceWarning: Liblinear failed to converge, increase the number of iterations.\n",
+            "  \"the number of iterations.\", ConvergenceWarning)\n"
+          ],
+          "name": "stderr"
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "rIZsCZpmlpNp",
+        "outputId": "b5aba9d5-bcaf-404b-d425-a62b3f811c3f"
+      },
+      "source": [
+        "# sparse encoder\n",
+        "compare_algorithms_2(sel_x_train_full_enc_3, y_train, sel_x_test_full_enc_3, y_test)"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "LR:\n",
+            "[[18587  1492]\n",
+            " [ 6195 13884]]\n",
+            "acc:  0.809  / DR:  0.691  / Prec:  0.903  / FAR:  0.074  / FNR:  0.309\n",
+            "Type I error:  1492  / Type II error:  6195\n",
+            "TBM:  0.26\n",
+            "TTM:  0.12 \n",
+            "\n",
+            "LDA:\n",
+            "[[18488  1591]\n",
+            " [ 1465 18614]]\n",
+            "acc:  0.924  / DR:  0.927  / Prec:  0.921  / FAR:  0.079  / FNR:  0.073\n",
+            "Type I error:  1591  / Type II error:  1465\n",
+            "TBM:  0.14\n",
+            "TTM:  0.11 \n",
+            "\n",
+            "LnSVC:\n",
+            "[[18835  1244]\n",
+            " [ 6195 13884]]\n",
+            "acc:  0.815  / DR:  0.691  / Prec:  0.918  / FAR:  0.062  / FNR:  0.309\n",
+            "Type I error:  1244  / Type II error:  6195\n",
+            "TBM:  1.02\n",
+            "TTM:  0.11 \n",
+            "\n"
+          ],
+          "name": "stdout"
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "rIq611UVllEh"
+      },
+      "source": [
+        "# SELECTED 10 FEATURES FROM THE SELECTED SET OF ORIGINAL FEATURES + EXTRACTED FEATURES\n",
+        "# 10 + 20 --> 10"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "f_x4CXTYlpxI",
+        "outputId": "81af6c0d-7c86-4f6a-cad5-2f4949df6609"
+      },
+      "source": [
+        "# stacked encoder\n",
+        "compare_algorithms_2(sel_x_train_sel_enc_1, y_train, sel_x_test_sel_enc_1, y_test)"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "LR:\n",
+            "[[17489  2590]\n",
+            " [ 1284 18795]]\n",
+            "acc:  0.904  / DR:  0.936  / Prec:  0.879  / FAR:  0.129  / FNR:  0.064\n",
+            "Type I error:  2590  / Type II error:  1284\n",
+            "TBM:  0.35\n",
+            "TTM:  0.12 \n",
+            "\n",
+            "LDA:\n",
+            "[[17850  2229]\n",
+            " [ 1308 18771]]\n",
+            "acc:  0.912  / DR:  0.935  / Prec:  0.894  / FAR:  0.111  / FNR:  0.065\n",
+            "Type I error:  2229  / Type II error:  1308\n",
+            "TBM:  0.14\n",
+            "TTM:  0.13 \n",
+            "\n",
+            "LnSVC:\n",
+            "[[18428  1651]\n",
+            " [ 1284 18795]]\n",
+            "acc:  0.927  / DR:  0.936  / Prec:  0.919  / FAR:  0.082  / FNR:  0.064\n",
+            "Type I error:  1651  / Type II error:  1284\n",
+            "TBM:  3.5\n",
+            "TTM:  0.11 \n",
+            "\n"
+          ],
+          "name": "stdout"
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "R-iFLCbrlp2i",
+        "outputId": "913adacd-93a4-4b7e-91a3-bb03ec5df2ae"
+      },
+      "source": [
+        "# sparse encoder\n",
+        "compare_algorithms_2(sel_x_train_sel_enc_3, y_train, sel_x_test_sel_enc_3, y_test)"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "LR:\n",
+            "[[18768  1311]\n",
+            " [ 2800 17279]]\n",
+            "acc:  0.898  / DR:  0.861  / Prec:  0.929  / FAR:  0.065  / FNR:  0.139\n",
+            "Type I error:  1311  / Type II error:  2800\n",
+            "TBM:  0.29\n",
+            "TTM:  0.12 \n",
+            "\n",
+            "LDA:\n",
+            "[[18815  1264]\n",
+            " [ 1466 18613]]\n",
+            "acc:  0.932  / DR:  0.927  / Prec:  0.936  / FAR:  0.063  / FNR:  0.073\n",
+            "Type I error:  1264  / Type II error:  1466\n",
+            "TBM:  0.13\n",
+            "TTM:  0.15 \n",
+            "\n",
+            "LnSVC:\n",
+            "[[19062  1017]\n",
+            " [ 1377 18702]]\n",
+            "acc:  0.94  / DR:  0.931  / Prec:  0.948  / FAR:  0.051  / FNR:  0.069\n",
+            "Type I error:  1017  / Type II error:  1377\n",
+            "TBM:  1.77\n",
+            "TTM:  0.11 \n",
+            "\n"
+          ],
+          "name": "stdout"
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "CfMlCmdRP42l"
+      },
+      "source": [
+        "DETAILED EXAMINATION OF OTHER DATASETS"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "xYzTF5eYQZiw",
+        "outputId": "7d52052a-c788-43a5-85e8-7539bdfde32d"
+      },
+      "source": [
+        "# for the full set of 82 normalised data\n",
+        "compare_algorithms_3(x_train_norm, y_train, x_test_norm, y_test)"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "LR:\n",
+            "[[18958  1121]\n",
+            " [  281 19798]]\n",
+            "acc:  0.965  / DR:  0.986  / Prec:  0.946  / FAR:  0.056  / FNR:  0.014\n",
+            "Type I error:  1121  / Type II error:  281\n",
+            "TBM:  1.19\n",
+            "TTM:  0.12 \n",
+            "\n"
+          ],
+          "name": "stdout"
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "-9-oc81N-KHp",
+        "outputId": "46932401-d7bb-4ace-cacb-b4dbc552212a"
+      },
+      "source": [
+        "# for the selected 10 best features of the normalised data\n",
+        "compare_algorithms_3(extree_train_features_norm, y_train, extree_test_features_norm, y_test)"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "LR:\n",
+            "[[18806  1273]\n",
+            " [  180 19899]]\n",
+            "acc:  0.964  / DR:  0.991  / Prec:  0.94  / FAR:  0.063  / FNR:  0.009\n",
+            "Type I error:  1273  / Type II error:  180\n",
+            "TBM:  0.38\n",
+            "TTM:  0.12 \n",
+            "\n"
+          ],
+          "name": "stdout"
+        }
+      ]
+    }
+  ]
+}
